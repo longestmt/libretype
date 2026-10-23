@@ -1,0 +1,15 @@
+LibreType
+Copyright (c) 2026 LibreTypist contributors
+
+The existing contributor attribution is retained; LibreType is the current
+application name. Application-owned code and documentation in this source tree
+are licensed under GNU GPL version 3 only (SPDX: GPL-3.0-only).
+See LICENSE for the full terms, including the absence of warranty.
+
+Third-party code, data and notices retain their upstream licenses. See
+THIRD_PARTY_NOTICES.md and third_party/. This license change does not revoke
+rights already granted in previously distributed MIT-licensed copies.
+
+This notice makes no representation that every AI-assisted portion independently
+qualifies for copyright protection or that third-party rights have been cleared.
+Contributors must have authority to license their submissions.

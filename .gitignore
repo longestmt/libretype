@@ -1,0 +1,44 @@
+# Publish only application source, tests, build tooling, documentation and notices.
+# New file categories require an explicit inclusion below.
+*
+!*/
+!/.gitignore
+!/Cargo.toml
+!/Cargo.lock
+!/LICENSE
+!/COPYRIGHT
+!/README.md
+!/THIRD_PARTY_NOTICES.md
+!/src/**/*.rs
+!/examples/*.rs
+!/scripts/*.py
+!/scripts/*.sh
+!/packaging/Info.plist
+!/docs/**/*.md
+!/third_party/REVIEW.md
+!/third_party/notices/inventory.json
+!/third_party/notices/**/LICENSE*
+!/third_party/notices/**/LICENCE*
+!/third_party/notices/**/COPYRIGHT*
+!/third_party/notices/**/COPYING*
+!/third_party/notices/**/NOTICE*
+!/third_party/notices/rust-runtime/licenses/*.txt
+!/vendor/gemoji/LICENSE
+!/vendor/gemoji/SOURCE.md
+!/vendor/gemoji/emoji.json
+!/vendor/curl/LICENSE
+!/vendor/curl/SOURCE.md
+
+# Local development evidence and generated artifacts are never publication inputs.
+/research/
+/backups/
+/target/
+/dist/
+/.git/
+**/__pycache__/
+**/.DS_Store
+**/*.pyc
+**/*.log
+**/.env*
+**/*.pem
+**/*.key
