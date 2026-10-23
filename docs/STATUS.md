@@ -54,6 +54,13 @@ completion into a compact input; focusing the synthetic password control activat
 secure input and suppressed suggestions. The secure-subrole rejection path also
 has deterministic regression coverage.
 
+A 30-second passive observation of build 44 on an Apple M1 measured about
+29 MiB of resident memory and 1.2% of one CPU core for the LibreType process.
+Terminal was foreground, capture reported an unavailable text window, and no
+suggestion was active. Settings were unchanged. This is a narrow baseline,
+not a controlled idle benchmark: it excludes Ollama, GPU and accessibility-server
+work, and does not establish peak memory, typing latency or battery use.
+
 Still requiring broader validation:
 
 - Learned-style quality and profile behavior across more editors and models.
