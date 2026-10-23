@@ -5,6 +5,9 @@ their own licenses; neither weights nor Ollama are included in the app/source
 release. The Local models window shows terms before download and links to them.
 Existing selected models are preserved. The starting recommendation is Qwen3
 1.7B, including on smaller-memory machines; actual memory needs and quality vary.
+See [exploratory completion results](MODEL_QUALITY.md) for observed speed and
+quality trade-offs. The starting recommendation is a lightweight option, not a
+claim that it produces the best writing.
 
 | Catalog family | Tags | Upstream license |
 | --- | --- | --- |

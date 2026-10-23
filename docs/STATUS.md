@@ -61,6 +61,12 @@ suggestion was active. Settings were unchanged. This is a narrow baseline,
 not a controlled idle benchmark: it excludes Ollama, GPU and accessibility-server
 work, and does not establish peak memory, typing latency or battery use.
 
+A separate [synthetic writing check](MODEL_QUALITY.md) compared 16 contexts across
+three local models, with two rounds each. It identified missing-word and factual
+specificity weaknesses in the smaller Qwen variants; a grammar-prompt candidate
+did not improve the observed gaps and was not adopted. Qwen3 4B was downloaded
+and verified through the production worker. The selected model stayed unchanged.
+
 Still requiring broader validation:
 
 - Learned-style quality and profile behavior across more editors and models.
