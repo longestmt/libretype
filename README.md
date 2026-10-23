@@ -35,6 +35,8 @@ The build creates `dist/LibreType.app`; installation defaults to
 `~/Applications/LibreType.app`. Development builds are ad-hoc signed and replacing
 them can require removing and re-adding the installed app in macOS
 **Privacy & Security → Accessibility**. The installer preserves a rollback copy.
+If the renewed approval does not take effect, quit and reopen LibreType before
+testing suggestions again.
 Certificate builds can use `--identity` with a valid signing identity; notarization
 and public release hosting are not configured.
 
@@ -55,6 +57,12 @@ The LT menu provides settings, pause/resume and model selection.
 Typing cancels stale suggestions. Tab retains normal behavior without an actionable
 suggestion. Shortcuts and dismissal behavior are configurable. Suggestions use the
 editor's exposed font where available, with a caret-based fallback.
+
+Compact editors identified by Accessibility as table cells wait for manual
+activation, preserving Tab navigation. Control-Option-Space enables suggestions
+in the current cell temporarily. Ordinary small fields and larger cell editors
+retain automatic suggestions. Editors that do not expose their cell association
+may behave differently; this does not establish Google Sheets compatibility.
 
 ## Privacy and local storage
 

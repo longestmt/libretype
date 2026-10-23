@@ -30,6 +30,8 @@ use std::{
 mod background;
 #[path = "native_choices.rs"]
 mod choices;
+#[path = "native_cells.rs"]
+mod cells;
 #[path = "native_code_editor.rs"]
 mod code_editor;
 #[path = "native_emoji.rs"]
@@ -532,6 +534,7 @@ unsafe fn capture_observation(
     });
     if result.is_none() {
         code_editor::revoke();
+        cells::revoke();
     }
     (result, empty)
 }
@@ -547,18 +550,21 @@ unsafe fn capture_inner(
     if !config.enabled {
         terminal::revoke();
         code_editor::revoke();
+        cells::revoke();
         return None;
     }
     capture_status("Accessibility permission needed");
     if !AXIsProcessTrusted() {
         terminal::revoke();
         code_editor::revoke();
+        cells::revoke();
         return None;
     }
     capture_status("Secure input active");
     if IsSecureEventInputEnabled() {
         terminal::revoke();
         code_editor::revoke();
+        cells::revoke();
         return None;
     }
     capture_status("Current app excluded");
@@ -567,6 +573,7 @@ unsafe fn capture_inner(
     if app.is_empty() || app == "org.libretypist.app" || !config.allows_app(&app) {
         terminal::revoke();
         code_editor::revoke();
+        cells::revoke();
         return None;
     }
     let system = OwnedCf(AXUIElementCreateSystemWide());
@@ -583,6 +590,7 @@ unsafe fn capture_inner(
     }
     if crate::terminal::supported(&app) {
         code_editor::revoke();
+        cells::revoke();
         return terminal::capture(pid, app, focused, manual_request).map(|ctx| CapturedField::Editor(Box::new(ctx)));
     }
     capture_status("Control role unavailable");
@@ -605,16 +613,22 @@ unsafe fn capture_inner(
         CAPTURE_DETAIL.with(|d| d.borrow_mut().role = role.clone());
     }
     capture_status("Control security metadata unavailable");
-    let subrole = match attr_checked(element.0, "AXSubrole") {
-        Ok(value) => string(value.0)?,
-        // Standard multiline text areas may explicitly not implement a subrole.
-        // For single-line controls, missing security metadata is not sufficient.
-        Err(-25205 | -25212) if role == "AXTextArea" => String::new(),
-        _ => return None,
-    };
-    capture_status("Secure text field");
-    if role == "AXSecureTextField" || subrole == "AXSecureTextField" {
-        return None;
+    let subrole = attr_checked(element.0, "AXSubrole")
+        .and_then(|value| string(value.0).ok_or(-25200));
+    // Chromium uses a nil subrole for ordinary inputs. Its password controls
+    // expose AXSecureTextField and do not expose AXVisibleCharacterRange.
+    // Require both that known provider and an unprotected range, never treating
+    // a messaging error or an unsupported attribute as evidence of safety.
+    let ordinary_chromium = subrole == Err(-25212) && role == "AXTextField"
+        && crate::website::is_chromium_browser(&app)
+        && unprotected_visible_range(element.0);
+    match text_security(&role, subrole.as_deref().map_err(|e| *e), ordinary_chromium) {
+        TextSecurity::Unknown => return None,
+        TextSecurity::Protected => {
+            capture_status("Secure text field");
+            return None;
+        }
+        TextSecurity::Unprotected => {}
     }
     // Only explicit text-entry roles, never arbitrary window or web-page text.
     capture_status("Focus is not an editable text field");
@@ -788,6 +802,10 @@ unsafe fn capture_inner(
         }
         caret = textedit_caret(caret, field_bounds, glyph, !prefix.contains(['\n', '\r']));
     }
+    capture_status("Compact table cell requires manual activation");
+    if !cells::allows(pid, &focused, &element, field_bounds, caret, manual_request) {
+        return None;
+    }
     // Reading AX attributes crosses process boundaries. Reject a snapshot if focus
     // or secure-input state changed while those messages were in flight.
     capture_status("Focus changed during capture");
@@ -810,6 +828,28 @@ unsafe fn capture_inner(
         field_bounds,
         terminal: None,
     })))
+}
+
+#[derive(Debug, PartialEq, Eq)]
+enum TextSecurity { Unprotected, Protected, Unknown }
+
+fn text_security(role: &str, subrole: Result<&str, i32>, ordinary_chromium: bool) -> TextSecurity {
+    if role == "AXSecureTextField" || subrole == Ok("AXSecureTextField") {
+        return TextSecurity::Protected;
+    }
+    match subrole {
+        Ok(_) => TextSecurity::Unprotected,
+        Err(-25205 | -25212) if role == "AXTextArea" => TextSecurity::Unprotected,
+        Err(-25212) if role == "AXTextField" && ordinary_chromium => TextSecurity::Unprotected,
+        _ => TextSecurity::Unknown,
+    }
+}
+
+unsafe fn unprotected_visible_range(element: AX) -> bool {
+    let Some(value) = attr(element, "AXVisibleCharacterRange") else { return false; };
+    let mut range = Range { location: 0, length: 0 };
+    ax_value(value.0, 4, &mut range) && range.location >= 0 && range.length >= 0
+        && range.location.checked_add(range.length).is_some()
 }
 
 unsafe fn element_bounds(element: AX) -> Option<NSRect> {
@@ -2574,6 +2614,7 @@ extern "C" fn on_save_instructions(_: &Object, _: Sel, _: id) {
                         s.code_editor_drafts.clear();
                         s.append_instruction_drafts.clear();
                         code_editor::revoke();
+                        cells::revoke();
                         "Saved all settings. Applies to new suggestions.".to_owned()
                     }
                     Err(error) => format!("Not saved: {error}"),
@@ -2631,6 +2672,7 @@ extern "C" fn event_callback(_: CF, kind: u32, event: CF, _: *mut c_void) -> CF 
                         }
                         terminal::revoke();
                         code_editor::revoke();
+                        cells::revoke();
                         s.suppressed_keys = 0;
                         s.tab_bypassed = false;
                         s.history.forget();
@@ -2669,6 +2711,7 @@ extern "C" fn event_callback(_: CF, kind: u32, event: CF, _: *mut c_void) -> CF 
                     if IsSecureEventInputEnabled() {
                         terminal::revoke();
                         code_editor::revoke();
+                        cells::revoke();
                         s.history.forget();
                         s.clear();
                         return;
@@ -2694,6 +2737,7 @@ extern "C" fn event_callback(_: CF, kind: u32, event: CF, _: *mut c_void) -> CF 
                     {
                         terminal::revoke();
                         code_editor::revoke();
+                        cells::revoke();
                     }
                     match action {
                         None if has_suggestion
@@ -3448,6 +3492,29 @@ pub fn run() -> Result<(), String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn chromium_nil_subrole_needs_positive_unprotected_range_evidence() {
+        assert_eq!(text_security("AXTextField", Err(-25212), true), TextSecurity::Unprotected);
+        assert_eq!(text_security("AXTextField", Err(-25212), false), TextSecurity::Unknown);
+        for error in [0, -25200, -25202, -25204, -25205, -25211] {
+            assert_eq!(text_security("AXTextField", Err(error), true), TextSecurity::Unknown);
+        }
+        assert_eq!(text_security("AXComboBox", Err(-25212), true), TextSecurity::Unknown);
+        assert_eq!(text_security("AXTextArea", Err(-25212), false), TextSecurity::Unprotected);
+        assert_eq!(text_security("AXTextArea", Err(-25204), true), TextSecurity::Unknown);
+    }
+
+    #[test]
+    fn secure_roles_override_all_fallback_evidence() {
+        for fallback in [false, true] {
+            assert_eq!(text_security("AXTextField", Ok("AXSecureTextField"), fallback), TextSecurity::Protected);
+            assert_eq!(text_security("AXTextArea", Ok("AXSecureTextField"), fallback), TextSecurity::Protected);
+            assert_eq!(text_security("AXSecureTextField", Err(-25212), fallback), TextSecurity::Protected);
+            assert_eq!(text_security("AXSecureTextField", Ok(""), fallback), TextSecurity::Protected);
+        }
+        assert_eq!(text_security("AXTextField", Ok("AXSearchField"), false), TextSecurity::Unprotected);
+    }
+
     #[test]
     fn empty_history_baseline_requires_empty_selection_and_visible_field() {
         let screen = rect(0., 0., 1440., 900.);

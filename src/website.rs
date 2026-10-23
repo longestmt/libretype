@@ -49,22 +49,24 @@ pub fn host_from_url(input: &str) -> Option<String> {
     canonical_host(url.host_str()?).ok()
 }
 
-pub fn is_browser(app: &str) -> bool {
+pub fn is_chromium_browser(app: &str) -> bool {
     matches!(
         app,
         "com.google.Chrome"
             | "com.google.Chrome.canary"
-            | "com.apple.Safari"
-            | "com.apple.SafariTechnologyPreview"
-            | "org.mozilla.firefox"
             | "com.microsoft.edgemac"
             | "com.brave.Browser"
             | "company.thebrowser.Browser"
             | "company.thebrowser.dia"
             | "com.vivaldi.Vivaldi"
             | "com.operasoftware.Opera"
-            | "com.kagi.kagimacOS"
     )
+}
+
+pub fn is_browser(app: &str) -> bool {
+    is_chromium_browser(app) || matches!(app,
+        "com.apple.Safari" | "com.apple.SafariTechnologyPreview"
+        | "org.mozilla.firefox" | "com.kagi.kagimacOS")
 }
 
 /// Ancestors arrive from the focused frame outward. An unknown outer document
@@ -91,6 +93,22 @@ impl DocumentScope {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn chromium_security_fallback_is_limited_to_known_browser_providers() {
+        for app in ["com.google.Chrome", "com.google.Chrome.canary", "com.microsoft.edgemac",
+            "com.brave.Browser", "company.thebrowser.Browser", "company.thebrowser.dia",
+            "com.vivaldi.Vivaldi", "com.operasoftware.Opera"] {
+            assert!(is_chromium_browser(app));
+            assert!(is_browser(app));
+        }
+        for app in ["com.apple.Safari", "com.apple.SafariTechnologyPreview", "org.mozilla.firefox", "com.kagi.kagimacOS"] {
+            assert!(!is_chromium_browser(app));
+            assert!(is_browser(app));
+        }
+        assert!(!is_chromium_browser("com.google.Chrome.fake"));
+        assert!(!is_chromium_browser("org.whispersystems.signal-desktop"));
+    }
+
     #[test]
     fn outer_document_controls_scope_and_unknown_identity_never_reuses_inner_scope() {
         let mut scope = DocumentScope::default();

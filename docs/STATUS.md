@@ -1,6 +1,6 @@
 # Status and limitations
 
-As of 2026-10-23, the current source passes 215 deterministic Rust tests.
+As of 2026-10-23, the current source passes 221 deterministic Rust tests.
 Optional live tests are ignored by default and need deliberate execution.
 
 Verified workflows include basic suggestion display/acceptance in the tested
@@ -35,6 +35,24 @@ Off produced another visible suggestion without attaching the loaded profile.
 Scoped deletion removed the test records and profile; original preferences
 were restored and history was locked. This verifies the native lifecycle, not
 comparative style quality or support in every editor.
+
+Compact editors with an accessible table-cell ancestor now require manual
+activation. The activation is restricted to the current cell, expires after
+30 seconds, and is revoked on focus loss, cancellation or a cell-address change.
+Ordinary small fields and larger cell editors remain automatic. Geometry and
+activation-boundary regressions pass. A native Chrome check in build 44 observed
+compact-cell inactivity, manual activation and verified insertion, plus automatic
+suggestions in the larger cell editor. The user confirmed the requested checks.
+This does not yet verify Google Sheets or other spreadsheet apps.
+
+The native cell test exposed an earlier rejection of ordinary single-line Chrome
+inputs with no subrole. The updated source permits this only for known Chromium
+browsers that explicitly report no subrole value and expose an unprotected
+visible-character range. Secure roles and failed/unsupported metadata stay
+rejected. The native check captured ordinary single-line fields and inserted a
+completion into a compact input; focusing the synthetic password control activated
+secure input and suppressed suggestions. The secure-subrole rejection path also
+has deterministic regression coverage.
 
 Still requiring broader validation:
 
