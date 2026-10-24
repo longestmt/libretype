@@ -204,6 +204,30 @@ impl AcceptancePlan {
         std::mem::take(&mut self.verified_words)
     }
 
+    /// Text-free explanation for an unconfirmed insertion. This is diagnostic
+    /// only: matching the full text with a different caret never confirms a
+    /// chunk, counts words, or allows the next chunk to be posted.
+    pub fn unconfirmed_reason(&self, prefix: &str, suffix: &str) -> &'static str {
+        let Some(chunk) = &self.in_flight else {
+            return "no pending chunk";
+        };
+        let expected_prefix = format!("{}{}", self.prefix, chunk);
+        if editor_equal(prefix, &expected_prefix) && editor_equal(suffix, &self.suffix) {
+            "expected text and caret present"
+        } else if editor_equal(prefix, &self.prefix) && editor_equal(suffix, &self.suffix) {
+            "editor unchanged before timeout"
+        } else if editor_equal(
+            &format!("{prefix}{suffix}"),
+            &format!("{expected_prefix}{}", self.suffix),
+        ) {
+            "expected text present but caret moved"
+        } else if !editor_equal(suffix, &self.suffix) {
+            "suffix changed"
+        } else {
+            "prefix differs from expected insertion"
+        }
+    }
+
     /// Prefix and suffix come from the editor's *current caret*, not merely its
     /// full value. A moved caret or changed text aborts the remaining insertion.
     pub fn observe(&mut self, prefix: &str, suffix: &str) -> Observation {
@@ -246,6 +270,61 @@ impl AcceptancePlan {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn unconfirmed_diagnostics_do_not_confirm_moved_carets_or_retry_chunks() {
+        let mut plan =
+            AcceptancePlan::new("We should ", "tomorrow.", "meet ", true, true, false).unwrap();
+        assert_eq!(plan.unconfirmed_reason("", ""), "no pending chunk");
+        assert_eq!(plan.next_chunk().as_deref(), Some("meet "));
+        for (prefix, suffix, reason, observation) in [
+            (
+                "We should ",
+                "tomorrow.",
+                "editor unchanged before timeout",
+                Observation::Waiting,
+            ),
+            (
+                "We should meet tomorrow.",
+                "",
+                "expected text present but caret moved",
+                Observation::Diverged,
+            ),
+            (
+                "We should\u{a0}",
+                "meet\u{a0}tomorrow.",
+                "expected text present but caret moved",
+                Observation::Diverged,
+            ),
+            (
+                "We should meet ",
+                "Friday.",
+                "suffix changed",
+                Observation::Diverged,
+            ),
+            (
+                "We should me",
+                "tomorrow.",
+                "prefix differs from expected insertion",
+                Observation::Diverged,
+            ),
+        ] {
+            assert_eq!(plan.unconfirmed_reason(prefix, suffix), reason);
+            assert_eq!(plan.observe(prefix, suffix), observation);
+            assert_eq!(plan.take_verified_words(), 0);
+            assert!(plan.next_chunk().is_none());
+        }
+        assert_eq!(
+            plan.unconfirmed_reason("We should meet ", "tomorrow."),
+            "expected text and caret present"
+        );
+        assert_eq!(
+            plan.observe("We should meet ", "tomorrow."),
+            Observation::Confirmed
+        );
+        assert_eq!(plan.take_verified_words(), 1);
+        assert!(plan.next_chunk().is_none());
+    }
+
     #[test]
     fn delayed_replacement_selection_waits_then_verifies_exact_emoji_edit() {
         let text = "Test :thumbsup:";

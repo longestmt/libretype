@@ -1,6 +1,6 @@
 # Status and limitations
 
-As of 2026-10-23, the current source passes 221 deterministic Rust tests.
+As of 2026-10-24, the current source passes 223 deterministic Rust tests.
 Optional live tests are ignored by default and need deliberate execution.
 
 Verified workflows include basic suggestion display/acceptance in the tested
@@ -43,7 +43,19 @@ Ordinary small fields and larger cell editors remain automatic. Geometry and
 activation-boundary regressions pass. A native Chrome check in build 44 observed
 compact-cell inactivity, manual activation and verified insertion, plus automatic
 suggestions in the larger cell editor. The user confirmed the requested checks.
-This does not yet verify Google Sheets or other spreadsheet apps.
+A subsequent disposable Google Sheets check produced completions in three cells,
+including mid-line insertion with the original suffix preserved. Cell-navigation
+behavior still needs clarification, and the latest acceptance diagnostic reported
+unconfirmed text/caret state despite the visible insertion. The check therefore
+does not establish full spreadsheet compatibility.
+
+That check also exposed an on-screen, zero-width editor being classified as
+visible. The current source rejects such editor bounds while preserving normal
+zero-width insertion carets. Visibility regressions pass; this guard has not yet
+been installed or verified in a native session.
+Unconfirmed-insertion diagnostics now distinguish unchanged text, a moved caret
+with the expected full text, and differing prefix/suffix text. These labels
+contain no writing; they do not relax verification or retry posted text.
 
 The native cell test exposed an earlier rejection of ordinary single-line Chrome
 inputs with no subrole. The updated source permits this only for known Chromium

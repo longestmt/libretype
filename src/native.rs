@@ -973,6 +973,9 @@ fn caret_is_visible(caret: NSRect, field: NSRect, screen: NSRect, primary_top: f
     let bottom = primary_top - caret.origin.y - caret.size.height;
     valid_rect(caret)
         && valid_rect(field)
+        // A caret can be a zero-width insertion point, but a zero-width
+        // editor is a hidden proxy, even when its coordinates are on-screen.
+        && field.size.width > 0.
         && valid_rect(screen)
         && primary_top.is_finite()
         && bottom.is_finite()
@@ -2330,9 +2333,9 @@ impl State {
                 self.insertion = Some(pending);
             }
             Observation::Waiting | Observation::Diverged => {
+                let reason = pending.plan.unconfirmed_reason(&current.prefix, &current.suffix);
                 self.clear();
-                self.last_accept =
-                    "Insertion stopped: expected text/caret not observed; no retry".into();
+                self.last_accept = format!("Insertion stopped: {reason}; no retry");
             }
             Observation::Confirmed => {
                 self.chunks_verified += 1;
@@ -3646,6 +3649,23 @@ mod tests {
         ));
         assert!(ghost_frame(rect(700., 200., 0., 18.), field, screen, 900.).is_none());
         assert!(midline_frame(rect(700., 200., 0., 18.), field, screen, 900.).is_some());
+    }
+
+    #[test]
+    fn capture_visibility_rejects_zero_width_editors_but_preserves_insertion_carets() {
+        let screen = rect(0., 0., 1440., 900.);
+        // Observed after a spreadsheet check: both rectangles were on-screen,
+        // but the editor had no visible width.
+        let proxy = rect(60., 0., 0., 1.);
+        assert!(!caret_is_visible(proxy, proxy, screen, 900.));
+        assert!(ghost_frame(proxy, proxy, screen, 900.).is_none());
+        assert!(midline_frame(proxy, proxy, screen, 900.).is_none());
+
+        let caret = rect(200., 200., 0., 18.);
+        let field = rect(100., 100., 600., 500.);
+        assert!(caret_is_visible(caret, field, screen, 900.));
+        assert!(ghost_frame(caret, field, screen, 900.).is_some());
+        assert!(midline_frame(caret, field, screen, 900.).is_some());
     }
 
     #[test]
