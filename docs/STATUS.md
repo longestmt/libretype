@@ -51,8 +51,8 @@ does not establish full spreadsheet compatibility.
 
 That check also exposed an on-screen, zero-width editor being classified as
 visible. The current source rejects such editor bounds while preserving normal
-zero-width insertion carets. Visibility regressions pass; this guard has not yet
-been installed or verified in a native session.
+zero-width insertion carets. Visibility regressions pass. Build 45 is installed
+and its local preview works; native verification awaits Accessibility renewal.
 Unconfirmed-insertion diagnostics now distinguish unchanged text, a moved caret
 with the expected full text, and differing prefix/suffix text. These labels
 contain no writing; they do not relax verification or retry posted text.
