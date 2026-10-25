@@ -101,7 +101,7 @@ function contentHarness() {
   const paragraphs=()=>parts().map((text,index)=>({tagName:'P',innerText:text,textContent:text,
     contains:node=>node===anchor && index===(state.paragraphIndex??parts().length-1)}));
   const editor={getAttribute:name=>name==='role'?'textbox':null,isContentEditable:true,
-    contains:node=>node===anchor,get children(){return paragraphs()},get innerText(){state.reads++;return state.text}};
+    contains:node=>node===anchor,get children(){return paragraphs()},get textContent(){state.reads++;return state.text}};
   const selection={get isCollapsed(){return state.collapsed},rangeCount:1,anchorNode:anchor,
     get anchorOffset(){return state.anchorOffset??parts()[state.paragraphIndex??parts().length-1].length},
     getRangeAt:()=>({getBoundingClientRect:()=>({...state.proxy})})};
@@ -163,19 +163,31 @@ test('focus, visibility, and page exit events immediately clear prior geometry',
   for(const event of ['blur','visibilitychange','pagehide']) h.listeners[event]();
   assert.deepEqual(h.messages.map(m=>m.type),['clear','clear','clear']);
 });
-test('paragraph-window offsets preserve blank lines, UTF-16 emoji, and mid-line positions',async()=>{
+test('paragraph-window offsets match native text nodes, UTF-16 emoji, and mid-line positions',async()=>{
   const h=contentHarness();
   h.state.paragraphTexts=['Earlier 👩‍💻 paragraph.','','We should tomorrow.'];
-  h.state.text=h.state.paragraphTexts.join('\n\n');
+  h.state.text=h.state.paragraphTexts.join('');
   h.state.anchorOffset='We should '.length;
   await h.tick();
-  assert.equal(h.messages[1].snapshot.selection_utf16,'Earlier 👩‍💻 paragraph.\n\n\n\nWe should '.length);
+  assert.equal(h.messages[1].snapshot.selection_utf16,'Earlier 👩‍💻 paragraph.We should '.length);
   h.messages.length=0;
-  h.state.text='Unexpected block separators';
+  h.state.text=h.state.paragraphTexts.join('\n\n');
   await h.tick();
   assert.deepEqual(h.messages.map(m=>m.type),['ping','clear']);
 });
 test('a caret-only change during hashing invalidates otherwise identical geometry',async()=>{
   const h=contentHarness();h.state.onHash=()=>{delete h.state.onHash;h.state.anchorOffset=2};
   await h.tick();assert.deepEqual(h.messages.map(m=>m.type),['ping','clear']);
+});
+test('the observed 18-paragraph Docs window matches its 1020-unit native value',async()=>{
+  const h=contentHarness();
+  h.state.paragraphTexts=Array.from({length:17},(_,i)=>`Synthetic paragraph ${44+i} for the LibreType scrolling check.`);
+  h.state.paragraphTexts.push('The agenda for tomorrow’s project meeting includes\u00a0');
+  h.state.text=h.state.paragraphTexts.join('');
+  assert.equal(h.state.text.length,1020);
+  assert.equal(h.state.paragraphTexts.join('\n\n').length,1054);
+  await h.tick();
+  const snapshot=h.messages.find(m=>m.type==='observe').snapshot;
+  assert.equal(snapshot.selection_utf16,1020);
+  assert.equal(snapshot.text_hash,crypto.createHash('sha256').update(h.state.text).digest('hex'));
 });

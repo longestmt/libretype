@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "LibreType for Google Docs",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Optional geometry-only companion for Google Docs. Completions stay in LibreType\u2019s local Rust engine.",
   "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAkS2I0LFuaaA3A0m7uUpIj/gqPAi1R7RPHtaEy8TemKIjwcsU3k04+SGjmE19XX/tr+fayg3Q87Qa681U/IOocGIomB3z5G+nK6Y0nsK4Lu0Nygn4EvpuWFi15WviSs2QKJmiXk/fLCdshHZoUkcACoCtBaLmnMjxomaPOVN/Z/kFvz9pimUwr/qOZRcK9KAVv/ueHHpGA6FO0v89pKIpbv8kD6QyUEWSZZLdrJB+aR7Hs1+wP+c64KaU5npH1r7YGBz/WDSVu+SWaIyV5mqgnnISWd2MM3MYfEsV98LKOpe2qE1lDUOES5uP2t9awhztTBATPEljzJg6kzZZrBgxIwIDAQAB",
   "permissions": [

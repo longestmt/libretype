@@ -90,6 +90,12 @@ pub(super) unsafe fn geometry(
             }) {
                 if docs_bridge::page_key(&url).is_some() {
                     let viewport = element_bounds(node.0)?;
+                    let scale = viewport.size.width / snapshot.viewport[0];
+                    CAPTURE_DETAIL.with(|d| d.borrow_mut().docs_proxy_delta = Some([
+                        caret.0.origin.x - (viewport.origin.x + snapshot.proxy_caret.0 * scale),
+                        caret.0.origin.y - (viewport.origin.y + snapshot.proxy_caret.1 * scale),
+                        caret.0.size.height - snapshot.proxy_caret.3 * scale,
+                    ]));
                     let resolved = snapshot.resolve_checked(&url, text, plain(caret.0), plain(viewport), caret.1);
                     diagnostic(match &resolved { Ok(_) => "Matched text and caret", Err(reason) => reason });
                     return resolved.ok().and_then(|(caret, field)| {

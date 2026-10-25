@@ -68,13 +68,18 @@ geometry. Native checks showed approximately 15 points at 100% and 22.5 points
 at 150%; the document was restored to 100% afterward.
 
 A 60-paragraph scrolling check exposed a rejected mapping when Docs changes
-the paragraph window it exposes. The next build and companion 0.1.1 match the
-exact UTF-16 caret offset against the same text fingerprint. The adapter first
-checks that the paragraph text and separators reconstruct the complete
-accessible value; an unsupported structure yields no geometry. Text-free
-diagnostics identify mismatched text, caret offsets, viewport or hidden bounds.
-The scrolling fix, longer suggestions requiring multiple chunks, browser zoom,
-and additional focus transitions still require native validation.
+the paragraph window it exposes. Build 55 added exact UTF-16 offset matching
+and text-free diagnostics. Those diagnostics identified a native caret offset
+of 1,020 versus 1,054 rendered-text units: `innerText` synthesized 34 paragraph
+separator characters absent from the text-node contents.
+
+The next build and companion 0.1.2 fingerprint the complete text-node contents
+and compute the matching caret offset. Paragraph contents must reconstruct
+that complete value. Both the exact text/offset and the hidden caret's physical
+coordinates must match, including across empty paragraphs with equal offsets.
+The observed 18-paragraph window is covered by a regression test. The scrolling
+fix, longer suggestions requiring multiple chunks, browser zoom, and additional
+focus transitions still require native validation.
 
 Run `cargo test --locked --offline`,
 `node --test tests/docs_companion.test.js`, and the Python packaging tests.

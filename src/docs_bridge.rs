@@ -166,11 +166,11 @@ impl Snapshot {
             return Err("Viewport scale mismatch");
         }
         let proxy = self.proxy_caret.mapped(native_viewport, xscale);
-        // Chromium's off-screen braille coordinates can diverge from DOM
-        // coordinates as Docs shifts its paragraph window. The exact text and
-        // UTF-16 caret match above establish identity; retain the hidden-surface
-        // and font-height checks instead of relying on those X/Y coordinates.
-        if (native_proxy.1 - native_viewport.1) / xscale >= -1000.
+        // Both text/offset and the actual hidden caret must match. Native text
+        // omits paragraph separators, so equal offsets alone cannot distinguish
+        // the end of one paragraph from the start of the next empty paragraph.
+        if (proxy.0 - native_proxy.0).abs() > 2.
+            || (proxy.1 - native_proxy.1).abs() > 2.
             || (proxy.3 - native_proxy.3).abs() > 3.
         {
             return Err("Hidden caret bounds mismatch");
@@ -374,9 +374,8 @@ mod tests {
                 19
             )
             .is_none());
-        // A shifted hidden paragraph window is safe only with exact current
-        // text and caret identity; a visible native control must never match.
-        assert!(s.resolve(page, "Thank you for your\u{a0}", Rect(250., -9500., 0., 18.), viewport, 19).is_some());
+        // Equal text/offsets do not authorize a different physical caret.
+        assert!(s.resolve(page, "Thank you for your\u{a0}", Rect(250., -9500., 0., 18.), viewport, 19).is_none());
         assert!(s.resolve(page, "Thank you for your\u{a0}", Rect(250., 200., 0., 18.), viewport, 19).is_none());
     }
     #[test]

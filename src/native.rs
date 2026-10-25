@@ -486,6 +486,7 @@ struct CaptureDetail {
     role: String,
     docs_companion: Option<&'static str>,
     docs_selection_utf16: Option<[usize; 2]>,
+    docs_proxy_delta: Option<[f64; 3]>,
     cell_context: Option<&'static str>,
     code_editor_kind: Option<&'static str>,
     caret_source: &'static str,
