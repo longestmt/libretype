@@ -88,6 +88,13 @@ suggestion was active. Settings were unchanged. This is a narrow baseline,
 not a controlled idle benchmark: it excludes Ollama, GPU and accessibility-server
 work, and does not establish peak memory, typing latency or battery use.
 
+A [synthetic resource measurement](PERFORMANCE.md) with the model already loaded
+completed 12 production-pipeline requests with a 1.15-second median. During that
+run build 47 used 36–40 MiB RSS and the Ollama model process used 3.78–3.97 GiB RSS.
+The repeatable sampler records process-level data and initial/final model state;
+it does not establish unique physical memory, battery impact or native typing
+latency. No application settings were changed.
+
 A separate [synthetic writing check](MODEL_QUALITY.md) compared 16 contexts across
 three local models, with two rounds each. It identified missing-word and factual
 specificity weaknesses in the smaller Qwen variants; a grammar-prompt candidate
