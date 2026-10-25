@@ -123,6 +123,15 @@ independently exercise its classification as Other. The result verifies this
 installed Twinny composer, not every editor extension or version. Settings and
 privacy controls were unchanged, and no chat message was submitted.
 
+Build 49 replaced the two dependencies whose exact license notices were missing.
+Its in-memory OCR check, Foundation geometry round trips and independent Clang
+callback lifetime tests passed. After Accessibility renewal, the user verified
+native ghost display and Tab acceptance in the unsent Twinny test draft; the
+app confirmed eight UTF-16 units inserted in one chunk. Settings were unchanged.
+This does not verify live screen capture. The matching source archive rebuilt
+with an empty Cargo cache and Cargo offline mode; all-target tests and the notice
+inventory check passed. Dynamic library paths refer only to macOS system files.
+
 ## Remaining work, in priority order
 
 1. **Personalization quality.** The native storage/profile lifecycle works, but
@@ -144,7 +153,7 @@ privacy controls were unchanged, and no chat message was submitted.
    login launch and clean-machine setup. Existing request timings and the passive
    process sample do not establish battery impact or a complete setup experience.
 5. **Release delivery.** The dependency replacements remove the two missing-notice
-   issues. Complete installed-app validation and the contributor-authority review
+   issues, and build 49 passed the native insertion check. Complete contributor review
    documented in [release instructions](RELEASING.md), then verify signing,
    upgrade Accessibility continuity, notarization and distribution. These are
    release gates separate from editor feature implementation.

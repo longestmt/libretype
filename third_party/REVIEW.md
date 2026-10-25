@@ -40,7 +40,9 @@ An independent test-only Objective-C consumer checks both callback signatures,
 copying, invocation on a worker thread after the Rust owner is dropped, and
 final capture cleanup. Foundation checks geometry layout and message round
 trips. These tests do not exercise live screen capture or establish support on
-untested CPU architectures. Installed-app validation remains separate.
+untested CPU architectures. Build 49 also passed a native Twinny ghost-display
+and Tab-insertion check after Accessibility renewal. Live screen capture remains
+unverified and disabled.
 
 ## Test provenance
 
