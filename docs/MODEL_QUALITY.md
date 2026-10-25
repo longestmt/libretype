@@ -125,3 +125,28 @@ model was unloaded after the check; its downloaded files remain available.
 The artifact was 5,225,388,164 bytes, Q4_K_M, with exact digest
 `500a1f067a9f782620b40bee6f7b0c89e17ae61f686b92c24933e4ca4b2b8b41`.
 Application settings, history and privacy controls were unchanged.
+
+### Two-pass preference experiments
+
+On 2026-10-25, two isolated Gemma4 E4B experiments reused the seven frozen cases.
+A post-generation review supplied the preliminary completed passage alongside
+the explicit instruction and asked for only necessary revisions. It preserved
+the compatible-name control but still returned `cheque` under the American
+spelling instruction. This added a second request without resolving the failure.
+
+A separate pre-generation filter asked the model to select compatible guidance
+and vocabulary indices. The program accepted only unique, in-range indices and
+retained the original entries verbatim; it could not invent new profile entries.
+This fixed the cheque example, but the filter dropped Ariadne under the unrelated
+concise-writing instruction. The resulting completion invented an email address
+instead of preserving that compatible name. The selector also retained several
+regional spellings despite the explicit spelling preference. Valid JSON and valid
+indices therefore did not establish correct semantic conflict resolution.
+
+Neither approach was adopted. The review experiment made 12 generation requests;
+the filter experiment made 17, including its five selection requests. No transport
+errors occurred. Eight new holdout contexts were prepared before inspecting the
+filter results but were not run because the frozen preservation control failed.
+These were synthetic, transient tests, with no history access, configuration
+changes or installed-app changes. Personalization quality remains unresolved;
+discarding compatible learned preferences is not an acceptable fix.
