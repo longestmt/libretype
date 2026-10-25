@@ -15,6 +15,19 @@ pub const HOST_NAME: &str = "org.libretype.docs";
 pub const MAX_FRAME: usize = 8192;
 pub const MAX_AGE: Duration = Duration::from_millis(800);
 
+/// The matched visible and braille carets represent the same insertion point.
+/// Visible height is in native points; proxy height is in browser CSS units.
+/// Their ratio includes Docs and browser zoom, absent from braille font metadata.
+/// This is not a font estimate from arbitrary line height.
+pub fn paired_caret_scale(visible_height: f64, proxy_height: f64) -> Option<f64> {
+    if !visible_height.is_finite() || !proxy_height.is_finite()
+        || !(5. ..=600.).contains(&visible_height) || !(5. ..=600.).contains(&proxy_height) {
+        return None;
+    }
+    let scale = visible_height / proxy_height;
+    (0.25..=4.).contains(&scale).then_some(scale)
+}
+
 /// A posted edit invalidates the old text fingerprint before the next browser
 /// observation. This permits waiting only; callers still validate live focus,
 /// and no chunk may be confirmed or reposted without fresh native text/caret.
@@ -245,6 +258,25 @@ pub mod transport;
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn matched_carets_capture_document_zoom_without_using_absolute_line_height() {
+        let normal = 16.859375;
+        assert_eq!(paired_caret_scale(normal, normal), Some(1.));
+        let measured = paired_caret_scale(25.296875, normal).unwrap();
+        assert!((measured * (44. / 3.) - 22.).abs() < 0.02);
+        // A different font or line height shared by both carets does not change
+        // the ratio. Browser zoom is included in the mapped visible height.
+        for base in [10., 20., 40.] {
+            for zoom in [0.5, 1., 1.5, 2.] {
+                assert_eq!(paired_caret_scale(base * zoom, base), Some(zoom));
+            }
+        }
+        assert_eq!(paired_caret_scale(18. * 1.5 * 1.25, 18.), Some(1.875));
+        for (visible, proxy) in [(0., normal), (normal, 0.), (f64::NAN, normal),
+            (normal, f64::INFINITY), (100., 10.), (5., 100.)] {
+            assert!(paired_caret_scale(visible, proxy).is_none());
+        }
+    }
     #[test]
     fn delayed_geometry_only_waits_for_known_docs_edits_and_never_reposts_a_chunk() {
         use crate::acceptance::{AcceptancePlan, Observation};

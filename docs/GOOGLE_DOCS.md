@@ -53,10 +53,18 @@ changes require explicit compatibility checks before broader support is claimed.
 Build 52 matched the visible Docs caret with native text and selection, generated
 a suggestion locally, and inserted it with Shift-Tab in a disposable document.
 The post-insertion check exposed a delay between the edit and the companion's
-new text fingerprint. The next build adds a bounded wait for that geometry
+new text fingerprint. Build 53 adds a bounded wait for that geometry
 refresh, restricted to an unchanged focused Docs editor. It never reposts a
-chunk. Native confirmation of that fix, repeated word acceptance, mid-line
-insertion, zoom/scroll, and disable/focus behavior remain to be checked.
+chunk. A native check subsequently reported “Insertion verified in editor,” and
+the user confirmed Tab followed by Shift-Tab inserted the suggestion correctly
+without changing its remaining words. Mid-line insertion also preserved the
+existing suffix and was verified natively. The Off control stopped companion
+messages and hid suggestions; it was re-enabled after the check.
+
+At 150% document zoom, caret mapping worked but the reported font size remained
+unzoomed. The next build scales that metadata using the paired visible/braille
+caret geometry. Native validation of font scaling, longer suggestions requiring
+multiple chunks, scrolling, and additional focus transitions remains pending.
 
 Run `cargo test --locked --offline`,
 `node --test tests/docs_companion.test.js`, and the Python packaging tests.

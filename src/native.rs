@@ -390,7 +390,7 @@ struct Context {
     range: Range,
     caret: NSRect,
     field_bounds: NSRect,
-    docs_geometry: bool,
+    docs_geometry: Option<f64>,
     terminal: Option<crate::terminal::Scope>,
 }
 enum CapturedField {
@@ -769,12 +769,12 @@ unsafe fn capture_inner(
     }
     capture_status("Text field bounds unavailable");
     let mut field_bounds = element_bounds(element.0)?;
-    let mut docs_geometry = false;
+    let mut docs_geometry = None;
     if range.length == 0 && website.as_deref() == Some("docs.google.com") {
-        if let Some((visible_caret, visible_field)) = docs::geometry(config, &app, &focused, pid, &text, caret, timeout) {
+        if let Some((visible_caret, visible_field, font_scale)) = docs::geometry(config, &app, &focused, pid, &text, caret, timeout) {
+            docs_geometry = Some(font_scale);
             caret = visible_caret;
             field_bounds = visible_field;
-            docs_geometry = true;
             CAPTURE_DETAIL.with(|d| d.borrow_mut().caret_source = "Google Docs companion");
         }
     }

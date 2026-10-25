@@ -34,7 +34,7 @@ fn native(rect: Rect) -> NSRect {
 
 pub(super) unsafe fn awaiting_geometry(config: &Config, original: &Context, elapsed: Duration) -> bool {
     if !docs_bridge::may_wait_after_insertion(
-        original.docs_geometry,
+        original.docs_geometry.is_some(),
         config.enabled && config.google_docs,
         elapsed,
         CAPTURE_STATUS.with(Cell::get),
@@ -54,7 +54,7 @@ pub(super) unsafe fn geometry(
     text: &str,
     caret: NSRect,
     timeout: f32,
-) -> Option<(NSRect, NSRect)> {
+) -> Option<(NSRect, NSRect, f64)> {
     if !config.google_docs || app != "com.google.Chrome" {
         return None;
     }
@@ -88,7 +88,13 @@ pub(super) unsafe fn geometry(
                     let viewport = element_bounds(node.0)?;
                     return snapshot
                         .resolve(&url, text, plain(caret), plain(viewport))
-                        .map(|(caret, field)| (native(caret), native(field)));
+                        .and_then(|(caret, field)| {
+                            // Metadata from the braille field is in CSS units.
+                            // The resolved caret is in native screen points,
+                            // including both document and browser zoom.
+                            docs_bridge::paired_caret_scale(caret.3, snapshot.proxy_caret.3)
+                                .map(|scale| (native(caret), native(field), scale))
+                        });
                 }
             }
         }

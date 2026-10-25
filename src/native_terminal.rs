@@ -367,7 +367,7 @@ unsafe fn capture_inner(
         range: cursor,
         caret,
         field_bounds,
-        docs_geometry: false,
+        docs_geometry: None,
         terminal: Some(prompt.scope),
     })
 }
@@ -414,7 +414,7 @@ mod tests {
                     },
                     caret: rect(400., 200., 0., 20.),
                     field_bounds: rect(300., 100., 300., 300.),
-                    docs_geometry: false,
+                    docs_geometry: None,
                     terminal: Some(p.scope),
                 }
             };

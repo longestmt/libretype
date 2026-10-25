@@ -329,7 +329,13 @@ pub(super) unsafe fn font(ctx: &Context) -> id {
     let info = range_info
         .map(|info| (info, "range metadata"))
         .or_else(|| marker_metadata(ctx).map(|info| (info, "text marker metadata")));
-    let (font, source) = if let Some((info, source)) = info {
+    let (font, source) = if let Some((mut info, source)) = info {
+        if let Some(points) = ctx.docs_geometry.and_then(|scale| docs_font_size(info.points, scale)) {
+            info.points = points;
+            let font = resolve(&info, false);
+            FONT_DIAGNOSTIC.with(|d| d.set(("Docs companion zoom", points)));
+            return font;
+        }
         let font = resolve(&info, ctx.terminal.is_some());
         match calibrated_font(ctx, &info, font) {
             Some(calibrated) => calibrated,
@@ -349,9 +355,27 @@ pub(super) unsafe fn font(ctx: &Context) -> id {
     font
 }
 
+fn docs_font_size(points: f64, paired_scale: f64) -> Option<f64> {
+    let scaled = points * paired_scale;
+    (points.is_finite() && (4. ..=200.).contains(&points)
+        && paired_scale.is_finite() && (0.25..=4.).contains(&paired_scale)
+        && (4. ..=200.).contains(&scaled)).then_some(scaled)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn docs_font_scaling_preserves_metadata_size_at_normal_zoom_and_bounds_results() {
+        assert_eq!(docs_font_size(44. / 3., 1.5), Some(22.));
+        assert_eq!(docs_font_size(18., 1.), Some(18.));
+        assert_eq!(docs_font_size(24., 0.5), Some(12.));
+        for (points, scale) in [(100., 4.), (4., 0.25), (16., 0.),
+            (16., f64::NAN), (f64::INFINITY, 1.)] {
+            assert!(docs_font_size(points, scale).is_none());
+        }
+    }
 
     unsafe fn sample(size: id, name: Option<&str>) -> OwnedCf {
         let dict: id = msg_send![class!(NSMutableDictionary), dictionary];
