@@ -1,6 +1,6 @@
 # Status and limitations
 
-As of 2026-10-24, the current source passes 223 deterministic Rust tests.
+As of 2026-10-24, the current source passes 225 deterministic Rust tests.
 Optional live tests are ignored by default and need deliberate execution.
 
 Verified workflows include basic suggestion display/acceptance in the tested
@@ -49,7 +49,14 @@ unconfirmed text/caret state after that test. An isolated mid-line check in buil
 45 displayed a preview, inserted five UTF-16 units, and verified the resulting
 text and caret in the editor; the original suffix remained intact. This does not
 establish the cause of the earlier warning or full spreadsheet compatibility.
-Navigation in a narrow spreadsheet cell remains under verification.
+A narrow-cell check in build 45 exposed automatic suggestions intercepting Tab.
+Sheets uses a floating editor without an accessible cell ancestor. The current
+source also recognizes its exact DOM identifier and A1-style cell address in a
+known Chromium browser on the exact Sheets host. Compact recognized cells require
+manual activation. The address stays local to the activation key and is not
+included in prompts or diagnostics. Activation survives editor growth but is
+revoked on cell-address, position or focus changes. Regressions pass; native
+verification of this additional detection is pending.
 
 That check also exposed an on-screen, zero-width editor being classified as
 visible. The current source rejects such editor bounds while preserving normal

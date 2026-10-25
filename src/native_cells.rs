@@ -38,6 +38,7 @@ struct CellKey {
     bounds: (f64, f64, f64, f64),
     row: Option<Range>,
     column: Option<Range>,
+    spreadsheet_address: Option<String>,
 }
 
 impl PartialEq for CellKey {
@@ -46,6 +47,7 @@ impl PartialEq for CellKey {
             && self.bounds == other.bounds
             && self.row == other.row
             && self.column == other.column
+            && self.spreadsheet_address == other.spreadsheet_address
             && unsafe {
                 CFEqual(self.focused.0, other.focused.0)
                     && CFEqual(self.editor.0, other.editor.0)
@@ -72,6 +74,63 @@ fn compact(field: NSRect, caret: NSRect) -> bool {
         && field.size.width > 0.
         && field.size.width <= caret.size.height * 12.
         && field.size.height <= caret.size.height * 2.
+}
+
+fn spreadsheet_address(app: &str, dom_id: &str, label: &str) -> Option<String> {
+    if !crate::website::is_chromium_browser(app) || dom_id != "waffle-rich-text-editor" {
+        return None;
+    }
+    // A single A1-style cell, not arbitrary labels or ranges. The address is
+    // held only in the activation key; it never enters diagnostics or prompts.
+    let letters = label.bytes().take_while(u8::is_ascii_uppercase).count();
+    let row = label.get(letters..)?;
+    ((1..=3).contains(&letters)
+        && (1..=7).contains(&row.len())
+        && !row.starts_with('0')
+        && row.bytes().all(|c| c.is_ascii_digit()))
+    .then(|| label.to_owned())
+}
+
+pub(super) unsafe fn spreadsheet_editor(app: &str, element: &OwnedCf) -> Option<String> {
+    if !crate::website::is_chromium_browser(app) {
+        return None;
+    }
+    let dom_id = string(attr(element.0, "AXDOMIdentifier")?.0)?;
+    if dom_id != "waffle-rich-text-editor" {
+        return None;
+    }
+    ["AXDescription", "AXTitle"].into_iter().find_map(|name| {
+        let label = string(attr(element.0, name)?.0)?;
+        spreadsheet_address(app, &dom_id, &label)
+    })
+}
+
+pub(super) fn scoped_spreadsheet_address<'a>(
+    address: Option<&'a str>,
+    host: Option<&str>,
+) -> Option<&'a str> {
+    address.filter(|_| host == Some("docs.google.com"))
+}
+
+fn spreadsheet_key(
+    pid: i32,
+    focused: &OwnedCf,
+    editor: &OwnedCf,
+    field: NSRect,
+    address: &str,
+) -> CellKey {
+    CellKey {
+        pid,
+        focused: focused.clone(),
+        editor: editor.clone(),
+        cell: editor.clone(),
+        // This floating editor grows horizontally as text is accepted. Keep
+        // activation through that resize, but not a move or cell-address change.
+        bounds: (field.origin.x, field.origin.y, 0., 0.),
+        row: None,
+        column: None,
+        spreadsheet_address: Some(address.into()),
+    }
 }
 
 unsafe fn index_range(cell: AX, name: &str) -> Option<Range> {
@@ -119,17 +178,27 @@ pub(super) unsafe fn allows(
     field: NSRect,
     caret: NSRect,
     manual: bool,
+    spreadsheet_address: Option<&str>,
 ) -> bool {
     let cell = if compact(field, caret) {
-        owning_cell(element, pid).map(|cell| CellKey {
-            row: index_range(cell.0, "AXRowIndexRange"),
-            column: index_range(cell.0, "AXColumnIndexRange"),
-            pid,
-            focused: focused.clone(),
-            editor: element.clone(),
-            cell,
-            bounds: rect_coords(field),
-        })
+        if let Some(address) = spreadsheet_address {
+            CAPTURE_DETAIL.with(|d| d.borrow_mut().cell_context = Some("compact spreadsheet cell"));
+            Some(spreadsheet_key(pid, focused, element, field, address))
+        } else {
+            owning_cell(element, pid).map(|cell| {
+                CAPTURE_DETAIL.with(|d| d.borrow_mut().cell_context = Some("compact table cell"));
+                CellKey {
+                    row: index_range(cell.0, "AXRowIndexRange"),
+                    column: index_range(cell.0, "AXColumnIndexRange"),
+                    pid,
+                    focused: focused.clone(),
+                    editor: element.clone(),
+                    cell,
+                    bounds: rect_coords(field),
+                    spreadsheet_address: None,
+                }
+            })
+        }
     } else {
         None
     };
@@ -191,6 +260,7 @@ mod tests {
                     location: 2,
                     length: 1,
                 }),
+                spreadsheet_address: None,
             }
         };
         let now = Instant::now();
@@ -209,5 +279,67 @@ mod tests {
             }
             assert!(!gate.allows(Some(other), false, now));
         }
+    }
+
+    #[test]
+    fn floating_spreadsheet_identity_requires_exact_provider_id_address_and_host() {
+        let app = "com.google.Chrome";
+        let id = "waffle-rich-text-editor";
+        for address in ["A1", "F2", "ZZZ1000000"] {
+            assert_eq!(
+                spreadsheet_address(app, id, address).as_deref(),
+                Some(address)
+            );
+        }
+        for label in [
+            "",
+            "F0",
+            "F02",
+            "f2",
+            " F2",
+            "F2 ",
+            "F2:G3",
+            "F2 notes",
+            "AAAA1",
+            "F10000000",
+            "F٢",
+        ] {
+            assert!(spreadsheet_address(app, id, label).is_none());
+        }
+        assert!(spreadsheet_address("org.whispersystems.signal-desktop", id, "F2").is_none());
+        assert!(spreadsheet_address(app, "formula-bar", "F2").is_none());
+        assert_eq!(
+            scoped_spreadsheet_address(Some("F2"), Some("docs.google.com")),
+            Some("F2")
+        );
+        for host in [
+            None,
+            Some("mail.google.com"),
+            Some("docs.google.com.example"),
+        ] {
+            assert_eq!(scoped_spreadsheet_address(Some("F2"), host), None);
+        }
+    }
+
+    #[test]
+    fn floating_cell_activation_survives_growth_but_not_cell_or_focus_changes() {
+        let focused = unsafe { cfstr("focus") };
+        let editor = unsafe { cfstr("editor") };
+        let now = Instant::now();
+        let key = |address, width| spreadsheet_key(7, &focused, &editor, rect(width, 19.), address);
+        let mut gate = Activation { current: None };
+        assert!(!gate.allows(Some(key("F2", 119.)), false, now));
+        assert!(gate.allows(Some(key("F2", 119.)), true, now));
+        assert!(gate.allows(Some(key("F2", 200.)), false, now));
+        assert!(!gate.allows(Some(key("F3", 200.)), false, now));
+        assert!(!gate.allows(Some(key("F2", 119.)), false, now));
+        assert!(gate.allows(Some(key("F2", 119.)), true, now));
+        let mut moved = key("F2", 119.);
+        moved.bounds.1 += 20.;
+        assert!(!gate.allows(Some(moved), false, now));
+        assert!(gate.allows(Some(key("F2", 119.)), true, now));
+        let mut other = key("F2", 119.);
+        other.focused = unsafe { cfstr("other") };
+        assert!(!gate.allows(Some(other), false, now));
     }
 }

@@ -481,6 +481,7 @@ thread_local! {
 #[derive(Default, serde::Serialize)]
 struct CaptureDetail {
     role: String,
+    cell_context: Option<&'static str>,
     caret_source: &'static str,
     range_bounds: Option<i32>,
     marker_selection: Option<i32>,
@@ -642,7 +643,9 @@ unsafe fn capture_inner(
     }
     // Electron desktop apps can expose internal file:// web areas. Website
     // rules apply to recognized browsers, not to those desktop app internals.
-    let needs_website = (!config.website_rules.is_empty()
+    let spreadsheet_address = cells::spreadsheet_editor(&app, &element);
+    let needs_website = (spreadsheet_address.is_some()
+        || !config.website_rules.is_empty()
         || config.background.clipboard
         || config.background.screen
         || config.history.recording
@@ -653,7 +656,7 @@ unsafe fn capture_inner(
     } else {
         capture_status("Website identity unavailable");
         let host = website_for_element(&focused, pid, timeout).ok().flatten();
-        if !config.website_rules.is_empty() && host.is_none() {
+        if (!config.website_rules.is_empty() || spreadsheet_address.is_some()) && host.is_none() {
             return None;
         }
         host
@@ -803,7 +806,15 @@ unsafe fn capture_inner(
         caret = textedit_caret(caret, field_bounds, glyph, !prefix.contains(['\n', '\r']));
     }
     capture_status("Compact table cell requires manual activation");
-    if !cells::allows(pid, &focused, &element, field_bounds, caret, manual_request) {
+    if !cells::allows(
+        pid,
+        &focused,
+        &element,
+        field_bounds,
+        caret,
+        manual_request,
+        cells::scoped_spreadsheet_address(spreadsheet_address.as_deref(), website.as_deref()),
+    ) {
         return None;
     }
     // Reading AX attributes crosses process boundaries. Reject a snapshot if focus
