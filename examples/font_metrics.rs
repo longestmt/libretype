@@ -5,8 +5,7 @@
 
 #[cfg(target_os = "macos")]
 fn main() {
-    use cocoa::base::{id, nil};
-    use cocoa::foundation::{NSSize, NSString};
+    use libretypist::native_abi::{id, NSSize};
     use objc::{class, msg_send, sel, sel_impl};
     #[link(name = "AppKit", kind = "framework")]
     extern "C" {
@@ -14,7 +13,8 @@ fn main() {
     }
     unsafe {
         let pool: id = msg_send![class!(NSAutoreleasePool), new];
-        let text = NSString::alloc(nil).init_str("your");
+        let text: id = msg_send![class!(NSString), alloc];
+        let text: id = msg_send![text, initWithBytes:b"your".as_ptr() length:4usize encoding:4usize];
         for points in [12., 14., 16., 18., 20., 24., 32.] {
             for mono in [false, true] {
                 let font: id = if mono {

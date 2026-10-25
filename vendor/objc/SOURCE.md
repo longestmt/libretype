@@ -29,7 +29,7 @@ it is not an upstream release of `objc`.
 
 Validation on the current Apple Silicon toolchain: 25 patched-library unit tests
 and seven documentation tests pass, including the original nil-message test and
-new null/empty/allocation ownership cases. LibreType's 226 deterministic tests,
+new null/empty/allocation ownership cases. LibreType's 229 deterministic tests,
 strict application-level Clippy check and 11 packaging/publication tests pass.
 Application and dependency tests also pass from the reviewed public-source
 export. Native installed-app validation remains a separate integration check.

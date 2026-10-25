@@ -1,6 +1,6 @@
 # Status and limitations
 
-As of 2026-10-24, the current source passes 226 deterministic Rust tests.
+As of 2026-10-25, the current source passes 229 deterministic Rust tests.
 Optional live tests are ignored by default and need deliberate execution.
 
 Verified workflows include basic suggestion display/acceptance in the tested
@@ -143,8 +143,9 @@ privacy controls were unchanged, and no chat message was submitted.
    application/model resource use under controlled conditions, then check actual
    login launch and clean-machine setup. Existing request timings and the passive
    process sample do not establish battery impact or a complete setup experience.
-5. **Release delivery.** Resolve the third-party notice and contributor-authority
-   gates documented in [release instructions](RELEASING.md), then verify signing,
+5. **Release delivery.** The dependency replacements remove the two missing-notice
+   issues. Complete installed-app validation and the contributor-authority review
+   documented in [release instructions](RELEASING.md), then verify signing,
    upgrade Accessibility continuity, notarization and distribution. These are
    release gates separate from editor feature implementation.
 

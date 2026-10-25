@@ -12,6 +12,10 @@ mod model;
 pub mod model_setup;
 #[cfg(target_os = "macos")]
 mod native;
+#[cfg(target_os = "macos")]
+mod native_abi;
+#[cfg(target_os = "macos")]
+mod native_blocks;
 mod screen_context;
 mod shortcuts;
 mod spelling;

@@ -50,3 +50,6 @@
 !/vendor/objc/COPYING-GPL-3.0
 !/vendor/objc/README.md
 !/vendor/objc/SOURCE.md
+
+# Native ABI interoperability fixture; test-only, not linked into the app.
+!/tests/block_abi.m

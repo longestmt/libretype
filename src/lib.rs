@@ -17,3 +17,6 @@ pub mod spelling;
 pub mod statistics;
 pub mod terminal;
 pub mod website;
+
+#[cfg(target_os = "macos")]
+pub mod native_abi;

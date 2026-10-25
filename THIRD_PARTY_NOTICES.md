@@ -16,8 +16,8 @@ code or data. Preserve their copyright, permission and attribution notices.
   `malloced` 1.3.1; its MIT and Apache-2.0 notices are retained in the inventory.
 - [Separate model licenses](docs/MODELS.md): no model weights or Ollama binary
   are included in LibreType's application bundle or source release.
-- [Open review items](third_party/REVIEW.md): one exact-version upstream notice
-  question and contributor-authority review still gate a public binary release.
+- [Open review items](third_party/REVIEW.md): contributor-authority review
+  and release delivery checks remain; the current inventory has no missing notices.
 
 Dependency declarations include MIT, Apache-2.0, ISC, Unicode-3.0 and compatible
 alternative-license expressions. Retaining both alternatives is not a requirement

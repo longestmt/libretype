@@ -24,7 +24,9 @@ withdraw MIT permissions already granted for earlier copies.
    It includes the reviewed application tree, locked Cargo dependency source and
    source supplied by the exact Rust toolchain for its runtime. The normal
    command refuses unresolved notice issues. A developer-only override exists
-   for testing the export and must not be used to bypass release review.
+   for testing the export and must not be used to bypass release review. The
+   archive reports `notice_inventory_complete`, not public-release approval;
+   contributor authority and delivery review remain separate.
 6. Publish the matching source archive beside every binary, with equivalent
    access, a clear source download link, release tag/build number and SHA-256
    hashes. A GitHub source snapshot containing Cargo.lock alone is insufficient

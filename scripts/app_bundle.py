@@ -313,6 +313,11 @@ def build(identity: str | None, build_number: str | None):
                 dest.mkdir(parents=True)
                 for name in ("LICENSE", "SOURCE.md"):
                     shutil.copy2(ROOT / "vendor" / dependency / name, dest / name)
+            # Keep the local binding patch's provenance and both license texts.
+            objc_legal = legal / "vendor" / "objc"
+            objc_legal.mkdir(parents=True)
+            for name in ("LICENSE.txt", "COPYING-GPL-3.0", "SOURCE.md"):
+                shutil.copy2(ROOT / "vendor" / "objc" / name, objc_legal / name)
             args = [CODESIGN, "--force", "--sign", identity or "-", "--identifier", APP_ID]
             if identity:
                 args += ["--options", "runtime", "--timestamp"]

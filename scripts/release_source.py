@@ -41,7 +41,7 @@ def create(output, allow_incomplete=False):
             'application': 'LibreType', 'license': 'GPL-3.0-only',
             'rustc': inventory['rustc'], 'target': inventory['target'],
             'cargo_lock_sha256': inventory['cargo_lock_sha256'],
-            'public_release_ready': not inventory['issues'],
+            'notice_inventory_complete': not inventory['issues'],
             'unresolved_notices': inventory['issues'],
             'files': {},
         }
@@ -54,7 +54,7 @@ def create(output, allow_incomplete=False):
             archive.add(stage, arcname='libretype')
     digest = hashlib.sha256(output.read_bytes()).hexdigest()
     output.with_suffix(output.suffix + '.sha256').write_text(f'{digest}  {output.name}\n')
-    return {'archive': str(output), 'sha256': digest, 'public_release_ready': not inventory['issues']}
+    return {'archive': str(output), 'sha256': digest, 'notice_inventory_complete': not inventory['issues']}
 
 
 def main():

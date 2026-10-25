@@ -9,10 +9,9 @@ use crate::{
     model,
     shortcuts::{Action, DismissBehavior, Dismissal, MODIFIERS, OPTION, SHIFT},
 };
-use cocoa::base::{id, nil, BOOL, NO, YES};
-use cocoa::foundation::{NSPoint, NSRect, NSSize};
+use crate::native_abi::{id, nil, NSPoint, NSRect, NSSize};
 use objc::declare::ClassDecl;
-use objc::runtime::{Object, Sel};
+use objc::runtime::{Object, Sel, BOOL, NO, YES};
 use objc::{class, msg_send, sel, sel_impl};
 use std::{
     cell::{Cell, RefCell},

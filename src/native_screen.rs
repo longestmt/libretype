@@ -6,7 +6,7 @@ use crate::{
     background::screen_allowed,
     screen_context::{self, Line, Window},
 };
-use block::ConcreteBlock;
+use crate::native_blocks::{PairBlock, Signature};
 
 #[link(name = "ScreenCaptureKit", kind = "framework")]
 extern "C" {}
@@ -191,7 +191,8 @@ unsafe fn start_capture(
     images: mpsc::SyncSender<ImageWork>,
     out: mpsc::Sender<Reply>,
 ) {
-    let completion=ConcreteBlock::new(move |content:id,error:id| {
+    let completion=PairBlock::new(Signature::Objects, move |content,error| {
+        let content=content.cast::<Object>(); let error=error.cast::<Object>();
         if epoch.load(Ordering::SeqCst)!=id { return; }
         let pool:id=msg_send![class!(NSAutoreleasePool),new];
         let capture=|| {
@@ -218,7 +219,8 @@ unsafe fn start_capture(
             let children:BOOL=msg_send![config,respondsToSelector:sel!(setIncludeChildWindows:)];
             if children==YES { let _:()=msg_send![config,setIncludeChildWindows:NO]; }
             let epoch2=epoch.clone(); let images2=images.clone(); let out2=out.clone();
-            let done=ConcreteBlock::new(move |image:CF,error:id| {
+            let done=PairBlock::new(Signature::ImageAndError, move |image,error| {
+                let image=image as CF; let error=error.cast::<Object>();
                 if epoch2.load(Ordering::SeqCst)!=id { return; }
                 if image.is_null() || error!=nil {
                     let _=out2.send(Reply{id,result:Err("Window capture unavailable")}); return;
@@ -227,15 +229,15 @@ unsafe fn start_capture(
                 if images2.try_send(ImageWork{id,image:retained,caret}).is_err() {
                     let _=out2.send(Reply{id,result:Err("OCR worker busy")});
                 }
-            }).copy();
-            let _:()=msg_send![class!(SCScreenshotManager),captureImageWithFilter:filter configuration:config completionHandler:&*done];
+            });
+            let _:()=msg_send![class!(SCScreenshotManager),captureImageWithFilter:filter configuration:config completionHandler:done.as_ptr()];
             let _:()=msg_send![config,release]; let _:()=msg_send![filter,release];
             true
         };
         if !capture() { let _=out.send(Reply{id,result:Err("Window changed or capture unavailable")}); }
         let _:()=msg_send![pool,drain];
-    }).copy();
-    let _: () = msg_send![class!(SCShareableContent),getShareableContentExcludingDesktopWindows:YES onScreenWindowsOnly:YES completionHandler:&*completion];
+    });
+    let _: () = msg_send![class!(SCShareableContent),getShareableContentExcludingDesktopWindows:YES onScreenWindowsOnly:YES completionHandler:completion.as_ptr()];
 }
 
 unsafe fn recognize(image: &Image, caret: [f64; 2]) -> Result<String, &'static str> {
