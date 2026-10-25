@@ -44,15 +44,18 @@ activation-boundary regressions pass. A native Chrome check in build 44 observed
 compact-cell inactivity, manual activation and verified insertion, plus automatic
 suggestions in the larger cell editor. The user confirmed the requested checks.
 A subsequent disposable Google Sheets check produced completions in three cells,
-including mid-line insertion with the original suffix preserved. Cell-navigation
-behavior still needs clarification, and the latest acceptance diagnostic reported
-unconfirmed text/caret state despite the visible insertion. The check therefore
-does not establish full spreadsheet compatibility.
+including mid-line insertion with the original suffix preserved. Build 44 reported
+unconfirmed text/caret state after that test. An isolated mid-line check in build
+45 displayed a preview, inserted five UTF-16 units, and verified the resulting
+text and caret in the editor; the original suffix remained intact. This does not
+establish the cause of the earlier warning or full spreadsheet compatibility.
+Navigation in a narrow spreadsheet cell remains under verification.
 
 That check also exposed an on-screen, zero-width editor being classified as
 visible. The current source rejects such editor bounds while preserving normal
-zero-width insertion carets. Visibility regressions pass. Build 45 is installed
-and its local preview works; native verification awaits Accessibility renewal.
+zero-width insertion carets. Visibility regressions pass. Build 45 is installed,
+Accessibility is active, and its local preview and native mid-line insertion work.
+The zero-width proxy rejection itself still needs native verification.
 Unconfirmed-insertion diagnostics now distinguish unchanged text, a moved caret
 with the expected full text, and differing prefix/suffix text. These labels
 contain no writing; they do not relax verification or retry posted text.
