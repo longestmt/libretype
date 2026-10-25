@@ -1,8 +1,9 @@
 # Optional Google Docs companion
 
-This integration is in development. Basic suggestion display and Shift-Tab
-insertion have passed a native Google Docs check; full compatibility testing
-is still in progress.
+This experimental integration supports collapsed-caret suggestions and insertion
+in Chrome. Native checks passed for word/full acceptance, mid-line insertion,
+document zoom and long-document scrolling. Broader compatibility testing is
+still in progress.
 
 Google Docs draws a visible caret separately from its off-screen braille editing
 surface. The optional Chrome extension supplies geometry to the Rust application;
@@ -81,8 +82,14 @@ completion and history context. Invalid UTF-16 splits are rejected. Exact hidden
 caret coordinates must still match, including empty paragraphs with equal raw
 offsets. Regression tests cover this observed window and emoji/mid-line offsets.
 
-The scrolling fix, longer suggestions requiring multiple chunks, browser zoom,
-and additional focus transitions still require native validation.
+Build 57 matched the 61-paragraph native window (3,471 raw caret units versus
+3,531 value units) and displayed a suggestion at the end of the long document.
+Scrolling the caret off-screen hid the overlay; scrolling back restored it with
+a fresh native text/caret match. Shift-Tab then inserted a 35-unit completion
+in two verified chunks, confirmed by the user and the final document text.
+The native paragraph window shrank from 61 paragraphs to 18 during insertion
+and still matched correctly. The disposable document was restored at 100% zoom.
+Browser zoom and additional focus transitions still require native validation.
 
 Run `cargo test --locked --offline`,
 `node --test tests/docs_companion.test.js`, and the Python packaging tests.

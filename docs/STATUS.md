@@ -162,8 +162,11 @@ Field-adjacent clickable controls are not implemented. Related actions are
 available through shortcuts and settings; previews remain non-interactive in
 accordance with the chosen interaction design.
 
-Google Docs support is now in development at the user’s request. Its Chrome
-companion is optional and off by default; native end-to-end verification is pending.
+Google Docs has experimental support through an [optional Chrome companion](GOOGLE_DOCS.md),
+off by default. Native checks passed for basic and mid-line insertion, stable
+word/full acceptance, 150% document zoom, and long-document scrolling and
+insertion. Selected-text alternatives, emoji/spelling replacements, tables,
+browser zoom and complex layouts are not covered by this support claim.
 Cross-Mac synchronization is outside the project scope.
 
 Local development evidence is retained outside the public source manifest.

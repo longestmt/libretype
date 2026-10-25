@@ -17,7 +17,8 @@ separately installed Ollama service. No subscription, account or usage quota.
 Compatibility depends on the editor exposing accessible text and a usable caret.
 Basic flows have been exercised in TextEdit, Signal, Gmail, Discord, Chrome,
 Safari and VSCodium; this is not a promise of support for every field in those apps.
-Google Docs is currently unsupported. See [status and limitations](docs/STATUS.md).
+Google Docs has experimental support through an [optional Chrome companion](docs/GOOGLE_DOCS.md).
+See [status and limitations](docs/STATUS.md).
 
 ## Build and run
 
