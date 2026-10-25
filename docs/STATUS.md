@@ -93,6 +93,10 @@ three local models, with two rounds each. It identified missing-word and factual
 specificity weaknesses in the smaller Qwen variants; a grammar-prompt candidate
 did not improve the observed gaps and was not adopted. Qwen3 4B was downloaded
 and verified through the production worker. The selected model stayed unchanged.
+An additional synthetic personalization check found that learned profiles can
+omit regional spelling preferences and that profile influence can defeat an
+explicit spelling override in a tested context. Two prompt candidates were
+rejected; the reproducible probe and evidence are described in the same document.
 
 Still requiring broader validation:
 

@@ -50,3 +50,39 @@ The Qwen3 4B catalog download completed through the production worker and was
 verified as local GGUF. Its downloaded size was 2,497,293,931 bytes, consistent
 with the [registry's approximate 2.5 GB size](https://ollama.com/library/qwen3:4b).
 Weights are separate from the application and are not publication inputs.
+
+## Exploratory personalization check
+
+On 2026-10-24, `examples/style_probe.rs` exercised the production profile builder
+and completion pipeline with three invented samples and matching American- and
+British-spelling versions. It never reads application settings, stored writing or
+Keychain. The initial check used five contexts and five conditions: influence Off,
+each learned profile at Strong, a direct spelling-only profile as a diagnostic
+control, and an explicit American-spelling override of the British-sample profile.
+
+With Gemma4 E4B, the original builder omitted spelling conventions from both
+profiles. For the unseen words colour, favourite and cancelled, the learned
+British-sample profile returned American spellings; the direct British-spelling
+control returned the intended British spellings. This distinguishes an extraction
+weakness from the model's ability to follow that spelling preference directly.
+
+Two extraction-prompt candidates added spelling analysis. They improved some
+outputs through recurring vocabulary but still omitted the British convention
+from guidance and still returned `color`. Two extra contexts, honour and cheque,
+were added before the first candidate run and retained for the second; they are
+fresh observations only for that first run. The candidates also exposed an
+override failure: the learned British-sample profile returned `cheque` despite
+an explicit American-spelling instruction. With no profile, the same explicit
+instruction returned `check`; a British instruction returned `cheque`.
+
+Neither prompt candidate was adopted. The retained probe makes these limitations
+reproducible for further work. The labour context was ambiguous enough to allow
+`laboratory equipment`, so it is not scored as a spelling failure. The unrelated
+dinner context produced plausible but different meals; this does not establish
+topic independence across arbitrary writing.
+
+The study comprised 25 original completions, 35 per candidate, two explicit-only
+controls and six profile builds, without transport errors. These are exploratory,
+unblinded development observations on one model, not an accuracy score or proof
+of broad style quality. All data were synthetic and transient to the production
+pipeline; history recording and the installed application were unchanged.
