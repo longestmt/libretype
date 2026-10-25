@@ -109,15 +109,25 @@ pub struct Snapshot {
     pub page_key: String,
     pub text_hash: String,
     pub selection_utf16: usize,
+    pub text_selection_utf16: usize,
     pub viewport: [f64; 2],
     pub field: Rect,
     pub caret: Rect,
     pub proxy_caret: Rect,
 }
+/// Split the native value at its verified UTF-16 caret, rejecting surrogate cuts.
+pub fn split_value(text: &str, offset: usize) -> Option<(String, String)> {
+    let units: Vec<u16> = text.encode_utf16().collect();
+    Some((String::from_utf16(units.get(..offset)?).ok()?,
+        String::from_utf16(units.get(offset..)?).ok()?))
+}
+
 impl Snapshot {
     pub fn valid(&self) -> bool {
         let [width, height] = self.viewport;
         fingerprint(&self.page_key) && fingerprint(&self.text_hash) && self.selection_utf16 <= 32768
+            && self.text_selection_utf16 >= self.selection_utf16 && self.text_selection_utf16 <= 32768
+            && self.text_selection_utf16 - self.selection_utf16 <= 255
             && width.is_finite() && height.is_finite()
             && (100. ..=20_000.).contains(&width) && (100. ..=20_000.).contains(&height)
             && Rect(0.,0.,width,height).contains(self.field) && self.field.contains(self.caret)
@@ -157,7 +167,7 @@ impl Snapshot {
         if text.len() > 128 * 1024 || hash(text) != self.text_hash {
             return Err("Accessible text fingerprint mismatch");
         }
-        if self.selection_utf16 != native_selection || native_selection > text.encode_utf16().count() {
+        if self.selection_utf16 != native_selection || split_value(text, self.text_selection_utf16).is_none() {
             return Err("Caret offset mismatch");
         }
         let xscale = native_viewport.2 / self.viewport[0];
@@ -327,6 +337,7 @@ mod tests {
             page_key: page_key("https://docs.google.com/document/d/synthetic_123/edit").unwrap(),
             text_hash: hash("Thank you for your\u{a0}"),
             selection_utf16: 19,
+            text_selection_utf16: 19,
             viewport: [1000., 800.],
             field: Rect(50., 120., 900., 680.),
             caret: Rect(300., 200., 2., 18.),
@@ -377,6 +388,28 @@ mod tests {
         // Equal text/offsets do not authorize a different physical caret.
         assert!(s.resolve(page, "Thank you for your\u{a0}", Rect(250., -9500., 0., 18.), viewport, 19).is_none());
         assert!(s.resolve(page, "Thank you for your\u{a0}", Rect(250., 200., 0., 18.), viewport, 19).is_none());
+    }
+    #[test]
+    fn paragraph_value_mapping_preserves_suffix_and_unicode_boundaries() {
+        let text = "Earlier 👩‍💻 paragraph.\n\nWe should tomorrow.";
+        let prefix = "Earlier 👩‍💻 paragraph.\n\nWe should ";
+        let mut s = sample();
+        s.text_hash = hash(text);
+        s.text_selection_utf16 = prefix.encode_utf16().count();
+        s.selection_utf16 = s.text_selection_utf16 - 2;
+        let page = "https://docs.google.com/document/d/synthetic_123/edit";
+        let viewport = Rect(40., 80., 1000., 800.);
+        let proxy = Rect(190., -9910., 0., 18.);
+        assert!(s.resolve(page, text, proxy, viewport, s.selection_utf16).is_some());
+        assert_eq!(split_value(text, s.text_selection_utf16), Some((prefix.into(), "tomorrow.".into())));
+        assert!(split_value("\n😀", 2).is_none());
+        assert_eq!(split_value("\n😀", 3), Some(("\n😀".into(), String::new())));
+        s.text_selection_utf16 = text.encode_utf16().count() + 1;
+        assert!(s.resolve(page, text, proxy, viewport, s.selection_utf16).is_none());
+        s.text_hash = hash("\n😀");
+        s.selection_utf16 = 1;
+        s.text_selection_utf16 = 2;
+        assert!(s.resolve(page, "\n😀", proxy, viewport, 1).is_none());
     }
     #[test]
     fn off_stale_cleared_or_invalid_snapshots_never_override_native_geometry() {

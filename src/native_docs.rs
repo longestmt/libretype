@@ -54,7 +54,7 @@ pub(super) unsafe fn geometry(
     text: &str,
     caret: (NSRect, usize),
     timeout: f32,
-) -> Option<(NSRect, NSRect, f64)> {
+) -> Option<(NSRect, NSRect, f64, usize)> {
     if !config.google_docs || app != "com.google.Chrome" {
         return None;
     }
@@ -103,7 +103,7 @@ pub(super) unsafe fn geometry(
                             // The resolved caret is in native screen points,
                             // including both document and browser zoom.
                             docs_bridge::paired_caret_scale(caret.3, snapshot.proxy_caret.3)
-                                .map(|scale| (native(caret), native(field), scale))
+                                .map(|scale| (native(caret), native(field), scale, snapshot.text_selection_utf16))
                         });
                 }
             }

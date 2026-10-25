@@ -7,14 +7,15 @@
   const equal = (a,b) => a.every((v,i)=>Math.abs(v-b[i])<0.1);
   const hash = async text => [...new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(text)))].map(v=>v.toString(16).padStart(2,'0')).join('');
   const clear = () => chrome.runtime.sendMessage({type:'clear'}).catch(()=>{});
-  function selectionOffset(doc,editor,selection,text) {
+  function nativeTextSelection(doc,editor,selection) {
     const paragraphs=Array.from(editor.children);
     if (!paragraphs.length || paragraphs.length>256 || paragraphs.some(p=>p.tagName!=='P')) return null;
     const parts=paragraphs.map(p=>p.textContent);
-    // Chromium's AXValue uses text-node contents for the Docs braille surface,
-    // without the paragraph separators synthesized by innerText. Require the
-    // complete native representation before computing its UTF-16 caret offset.
-    if (parts.join('')!==text) return null;
+    // AXValue inserts one newline per paragraph, while AXSelectedTextRange
+    // counts text-node units only. Verify all nodes and carry both offsets.
+    if (parts.join('')!==editor.textContent) return null;
+    const text=parts.join('\n');
+    if (text.length>32768) return null;
     let offset=0;
     for(let i=0;i<paragraphs.length;i++) {
       const p=paragraphs[i];
@@ -23,7 +24,7 @@
         prefix.setEnd(selection.anchorNode,selection.anchorOffset);
         const before=prefix.toString();
         if (!p.textContent.startsWith(before)) return null;
-        return offset+before.length; // UTF-16, as used by AXSelectedTextRange.
+        return {text,selection_utf16:offset+before.length,text_selection_utf16:offset+i+before.length};
       }
       offset+=parts[i].length;
     }
@@ -50,11 +51,9 @@
     const right=Math.min(width,area[0]+area[2]), bottom=Math.min(height,area[1]+area[3]);
     if (caret[3]<=0 || proxy[3]<=0 || proxy[1]>=-1000 || caret[0]<left || caret[1]<top
       || caret[0]+caret[2]>right || caret[1]+caret[3]>bottom) return null;
-    const text=editor.textContent;
-    if (typeof text!=='string' || text.length>32768) return null;
-    const selection_utf16=selectionOffset(doc,editor,selection,text);
-    if (selection_utf16===null || selection_utf16>text.length) return null;
-    return {text,selection_utf16,viewport:[width,height],field:[left,top,right-left,bottom-top],caret,proxy_caret:proxy};
+    const position=nativeTextSelection(doc,editor,selection);
+    if (!position || position.text_selection_utf16>position.text.length) return null;
+    return {...position,viewport:[width,height],field:[left,top,right-left,bottom-top],caret,proxy_caret:proxy};
   }
   async function tick() {
     if (busy) return;
@@ -67,9 +66,11 @@
       const page_key=await hash(location.origin+location.pathname);
       const text_hash=await hash(before.text);
       const after=observe();
-      if (!after || before.text!==after.text || before.selection_utf16!==after.selection_utf16 || !equal(before.caret,after.caret)
+      if (!after || before.text!==after.text || before.selection_utf16!==after.selection_utf16
+        || before.text_selection_utf16!==after.text_selection_utf16 || !equal(before.caret,after.caret)
         || !equal(before.proxy_caret,after.proxy_caret) || !equal(before.viewport,after.viewport)) { await clear(); return; }
-      await chrome.runtime.sendMessage({type:'observe',snapshot:{page_key,text_hash,selection_utf16:after.selection_utf16,viewport:after.viewport,
+      await chrome.runtime.sendMessage({type:'observe',snapshot:{page_key,text_hash,selection_utf16:after.selection_utf16,
+        text_selection_utf16:after.text_selection_utf16,viewport:after.viewport,
         field:after.field,caret:after.caret,proxy_caret:after.proxy_caret}});
     } catch { await clear(); }
     finally { busy=false; }

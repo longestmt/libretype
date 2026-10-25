@@ -25,7 +25,7 @@ function harness({automaticReplies=true}={}) {
   return {context,chrome,messages,ports,setActive(value){active=value},setFocused(value){focused=value}};
 }
 const sender=()=>({frameId:0,url,tab:{id:1,windowId:2}});
-const sample=()=>({type:'observe',snapshot:{page_key:'a'.repeat(64),text_hash:'b'.repeat(64),selection_utf16:19,viewport:[1000,800],field:[50,120,900,680],caret:[300,200,2,18],proxy_caret:[150,-9990,0,18]}});
+const sample=()=>({type:'observe',snapshot:{page_key:'a'.repeat(64),text_hash:'b'.repeat(64),selection_utf16:19,text_selection_utf16:19,viewport:[1000,800],field:[50,120,900,680],caret:[300,200,2,18],proxy_caret:[150,-9990,0,18]}});
 test('extension identity is derived from its public key and permissions stay Docs-only',()=>{
   const manifest=JSON.parse(fs.readFileSync(path.join(root,'manifest.json')));
   const id=crypto.createHash('sha256').update(Buffer.from(manifest.key,'base64')).digest('hex').slice(0,32).split('').map(c=>String.fromCharCode(97+parseInt(c,16))).join('');
@@ -55,6 +55,10 @@ test('unexpected text payloads and malformed fingerprints never reach the native
   }
   for(const offset of [-1,0.5,32769,null]) {
     const message=sample();message.snapshot.selection_utf16=offset;
+    assert.equal((await h.context.route(message,sender())).accepted,false);
+  }
+  for(const offset of [18,19.5,275,32769,null]) {
+    const message=sample();message.snapshot.text_selection_utf16=offset;
     assert.equal((await h.context.route(message,sender())).accepted,false);
   }
   assert.equal(h.messages.length,0);
@@ -170,6 +174,8 @@ test('paragraph-window offsets match native text nodes, UTF-16 emoji, and mid-li
   h.state.anchorOffset='We should '.length;
   await h.tick();
   assert.equal(h.messages[1].snapshot.selection_utf16,'Earlier 👩‍💻 paragraph.We should '.length);
+  assert.equal(h.messages[1].snapshot.text_selection_utf16,'Earlier 👩‍💻 paragraph.\n\nWe should '.length);
+  assert.equal(h.messages[1].snapshot.text_hash,crypto.createHash('sha256').update(h.state.paragraphTexts.join('\n')).digest('hex'));
   h.messages.length=0;
   h.state.text=h.state.paragraphTexts.join('\n\n');
   await h.tick();
@@ -179,7 +185,7 @@ test('a caret-only change during hashing invalidates otherwise identical geometr
   const h=contentHarness();h.state.onHash=()=>{delete h.state.onHash;h.state.anchorOffset=2};
   await h.tick();assert.deepEqual(h.messages.map(m=>m.type),['ping','clear']);
 });
-test('the observed 18-paragraph Docs window matches its 1020-unit native value',async()=>{
+test('the observed Docs window maps raw caret 1020 into its 1037-unit native value',async()=>{
   const h=contentHarness();
   h.state.paragraphTexts=Array.from({length:17},(_,i)=>`Synthetic paragraph ${44+i} for the LibreType scrolling check.`);
   h.state.paragraphTexts.push('The agenda for tomorrow’s project meeting includes\u00a0');
@@ -189,5 +195,8 @@ test('the observed 18-paragraph Docs window matches its 1020-unit native value',
   await h.tick();
   const snapshot=h.messages.find(m=>m.type==='observe').snapshot;
   assert.equal(snapshot.selection_utf16,1020);
-  assert.equal(snapshot.text_hash,crypto.createHash('sha256').update(h.state.text).digest('hex'));
+  const nativeValue=h.state.paragraphTexts.join('\n');
+  assert.equal(nativeValue.length,1037);
+  assert.equal(snapshot.text_selection_utf16,1037);
+  assert.equal(snapshot.text_hash,crypto.createHash('sha256').update(nativeValue).digest('hex'));
 });

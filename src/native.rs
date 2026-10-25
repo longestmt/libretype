@@ -407,6 +407,7 @@ impl Context {
                 self.prefix == other.prefix && self.suffix == other.suffix
             } else {
                 self.range == other.range && self.text == other.text
+                    && self.prefix == other.prefix && self.suffix == other.suffix
             }
             && self.insertion == other.insertion
             && self.docs_geometry == other.docs_geometry
@@ -704,8 +705,10 @@ unsafe fn capture_inner(
     if selection_end > units.len() {
         return None;
     }
-    let prefix = String::from_utf16(&units[..pos]).ok()?;
-    let suffix = String::from_utf16(&units[selection_end..]).ok()?;
+    // Docs' raw caret may split a surrogate in AXValue because it excludes
+    // paragraph separators. Defer decoding failure until its mapping is tried.
+    let mut prefix = String::from_utf16(&units[..pos]).ok();
+    let mut suffix = String::from_utf16(&units[selection_end..]).ok();
     capture_status("Caret bounds unavailable");
     let name = cfstr("AXBoundsForRange");
     let mut caret = NSRect::new(NSPoint::new(0., 0.), NSSize::new(0., 0.));
@@ -733,7 +736,7 @@ unsafe fn capture_inner(
     // Some standard editors do not return bounds for a zero-length range.
     // An ASCII character immediately before the caret provides its trailing
     // edge without guessing from the entire field or changing the selection.
-    if !exact_caret && prefix.is_ascii() && !prefix.ends_with(['\n', '\r', '\t']) && pos > 0 {
+    if !exact_caret && prefix.as_ref().is_some_and(|p| p.is_ascii() && !p.ends_with(['\n', '\r', '\t'])) && pos > 0 {
         let previous = Range {
             location: range.location - 1,
             length: 1,
@@ -774,13 +777,20 @@ unsafe fn capture_inner(
     let mut field_bounds = element_bounds(element.0)?;
     let mut docs_geometry = None;
     if range.length == 0 && website.as_deref() == Some("docs.google.com") {
-        if let Some((visible_caret, visible_field, font_scale)) = docs::geometry(config, &app, &focused, pid, &text, (caret, pos), timeout) {
+        if let Some((visible_caret, visible_field, font_scale, text_offset)) = docs::geometry(config, &app, &focused, pid, &text, (caret, pos), timeout) {
+            // Native AX APIs count text-node offsets; AXValue includes block
+            // newlines. Use the verified value offset for completion/history.
+            let (before, after) = crate::docs_bridge::split_value(&text, text_offset)?;
+            prefix = Some(before);
+            suffix = Some(after);
             docs_geometry = Some(font_scale);
             caret = visible_caret;
             field_bounds = visible_field;
             CAPTURE_DETAIL.with(|d| d.borrow_mut().caret_source = "Google Docs companion");
         }
     }
+    let prefix = prefix?;
+    let suffix = suffix?;
     if let Some(viewport) = editor_policy.viewport {
         if let Some(expanded) = code_editor::display_bounds(field_bounds, caret, viewport) {
             field_bounds = expanded;
@@ -1305,7 +1315,8 @@ impl State {
         };
         self.replacement = choices.plan(&ctx.prefix, &ctx.suffix);
         self.replacement_actionable =
-            self.replacement.is_some() && is_settable(ctx.element.0, "AXSelectedTextRange");
+            self.replacement.is_some() && ctx.docs_geometry.is_none()
+                && is_settable(ctx.element.0, "AXSelectedTextRange");
         self.suggestion = if self.replacement_actionable {
             choices.display()
         } else {
@@ -1357,7 +1368,8 @@ impl State {
         }
         self.requested = true;
         self.replacement_actionable =
-            self.config.spelling.show_fixes && is_settable(ctx.element.0, "AXSelectedTextRange");
+            self.config.spelling.show_fixes && ctx.docs_geometry.is_none()
+                && is_settable(ctx.element.0, "AXSelectedTextRange");
         self.suggestion = if self.replacement_actionable {
             format!(" → {}", correction.corrected)
         } else {
@@ -1378,6 +1390,12 @@ impl State {
             self.clear();
             return false;
         };
+        // The companion currently verifies collapsed carets only. Replacement
+        // needs a verified noncollapsed selection and raw/value range mapping.
+        if current.docs_geometry.is_some() {
+            self.clear();
+            return false;
+        }
         if self.context.as_ref().is_none_or(|old| !old.same(&current)) {
             self.clear();
             return false;

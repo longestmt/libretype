@@ -29,7 +29,8 @@ accessibility settings, which may also be used by other assistive software.
 
 ## Data and boundaries
 
-The extension sends viewport, editor and caret rectangles, a UTF-16 caret offset,
+The extension sends viewport, editor and caret rectangles, native and value-string
+UTF-16 caret offsets,
 and SHA-256 fingerprints of the document path and accessible text. It does not transmit the
 text itself, edit the document, handle acceptance keys, use the clipboard, or
 open a network service. Fingerprints are still derived from document data; they
@@ -46,7 +47,9 @@ website exclusion and focus checks remain in force. Unsupported geometry stays
 unsupported; it does not enable a guessed caret or insertion fallback.
 
 Initial development targets collapsed-caret suggestions and ordinary insertion.
-Selected-text alternatives, document tables, complex layout, zoom and window
+Selected-text alternatives and range replacements (including emoji and spelling
+fixes) are unavailable in the Docs companion. Its adapter currently verifies
+collapsed carets only. Document tables, complex layout, browser zoom and window
 changes require explicit compatibility checks before broader support is claimed.
 
 ## Development validation
@@ -67,19 +70,19 @@ unzoomed. Build 54 scales that metadata using paired visible/braille caret
 geometry. Native checks showed approximately 15 points at 100% and 22.5 points
 at 150%; the document was restored to 100% afterward.
 
-A 60-paragraph scrolling check exposed a rejected mapping when Docs changes
-the paragraph window it exposes. Build 55 added exact UTF-16 offset matching
-and text-free diagnostics. Those diagnostics identified a native caret offset
-of 1,020 versus 1,054 rendered-text units: `innerText` synthesized 34 paragraph
-separator characters absent from the text-node contents.
+A 60-paragraph scrolling check exposed three different representations of the
+same 18-paragraph accessible window: native AXValue has 1,037 UTF-16 units,
+DOM innerText has 1,054, and textContent/native caret positions have 1,020.
+The native value contains one newline per paragraph boundary; native caret
+positions omit those separators. Companion 0.1.3 reconstructs the native value
+for fingerprint matching and supplies both caret offsets. LibreType retains
+the raw offset for Accessibility calls and uses the verified value offset for
+completion and history context. Invalid UTF-16 splits are rejected. Exact hidden
+caret coordinates must still match, including empty paragraphs with equal raw
+offsets. Regression tests cover this observed window and emoji/mid-line offsets.
 
-The next build and companion 0.1.2 fingerprint the complete text-node contents
-and compute the matching caret offset. Paragraph contents must reconstruct
-that complete value. Both the exact text/offset and the hidden caret's physical
-coordinates must match, including across empty paragraphs with equal offsets.
-The observed 18-paragraph window is covered by a regression test. The scrolling
-fix, longer suggestions requiring multiple chunks, browser zoom, and additional
-focus transitions still require native validation.
+The scrolling fix, longer suggestions requiring multiple chunks, browser zoom,
+and additional focus transitions still require native validation.
 
 Run `cargo test --locked --offline`,
 `node --test tests/docs_companion.test.js`, and the Python packaging tests.
