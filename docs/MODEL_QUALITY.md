@@ -86,3 +86,24 @@ controls and six profile builds, without transport errors. These are exploratory
 unblinded development observations on one model, not an accuracy score or proof
 of broad style quality. All data were synthetic and transient to the production
 pipeline; history recording and the installed application were unchanged.
+
+### Frozen-profile conflict checks
+
+`examples/preference_conflict_probe.rs` isolates completion behavior from profile
+extraction with fixed invented profiles and seven contexts/conditions. On the
+same installed model digests listed above, all three models returned `cheque`
+despite an American-spelling instruction when the spelling profile was active.
+With influence Off, Gemma4 E4B and Qwen3 4B returned `check`; Qwen3 1.7B returned
+no insertion. All three respected an explicit Morgan recipient and retained
+Ariadne when compatible with a concise-writing instruction. Gemma4 E4B and
+Qwen3 1.7B honored an explicit `Kind regards` sign-off; Qwen3 4B instead selected
+the profile's recurring sign-off.
+
+Three Gemma4 E4B experiments tested a separate system message, moving observations
+into reference context, and reducing profile influence to a tie-breaker whenever
+explicit preferences were present. None fixed the spelling conflict. The reference
+variant also regressed the sign-off override. All three were reverted; no profile
+strength, request format or model-selection change was adopted. The 42 completions
+(seven baseline, seven per candidate, seven per Qwen model) had no transport errors.
+This remains a known model-compliance limitation, not a claim that every explicit
+preference is unreliable or that any model is universally preferable.
