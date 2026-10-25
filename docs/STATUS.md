@@ -106,9 +106,15 @@ extension identity. Model settings, transcript editors, unrelated origins and
 similarly named classes are rejected by regression checks. The identifiers came
 from a read-only packaged-interface inspection; no extension implementation was
 copied. A text-free diagnostic distinguishes source, chat, extension chat and
-other controls. Build 47 is installed and awaits renewed Accessibility approval
-before native verification; automatic display and insertion in this extension
-are not yet claimed as working.
+other controls. With build 47 installed and Accessibility renewed, the native
+trace classified the composer as extension chat and displayed ghost text. The
+user accepted it with Tab; LibreType verified eight UTF-16 units in one chunk,
+and the completed unsent draft was inspected. The nearby model-name field showed
+no suggestion, and returning to the composer restored ghost text. That field was
+rejected by the earlier security-metadata gate, so the native check does not
+independently exercise its classification as Other. The result verifies this
+installed Twinny composer, not every editor extension or version. Settings and
+privacy controls were unchanged, and no chat message was submitted.
 
 ## Remaining work, in priority order
 
