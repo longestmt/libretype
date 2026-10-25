@@ -32,6 +32,20 @@ fn native(rect: Rect) -> NSRect {
     NSRect::new(NSPoint::new(rect.0, rect.1), NSSize::new(rect.2, rect.3))
 }
 
+pub(super) unsafe fn awaiting_geometry(config: &Config, original: &Context, elapsed: Duration) -> bool {
+    if !docs_bridge::may_wait_after_insertion(
+        original.docs_geometry,
+        config.enabled && config.google_docs,
+        elapsed,
+        CAPTURE_STATUS.with(Cell::get),
+    ) || original.app != "com.google.Chrome" || original.website.as_deref() != Some("docs.google.com") {
+        return false;
+    }
+    let system = OwnedCf(AXUIElementCreateSystemWide());
+    capture_focus_unchanged(system.0, &original.focused, original.pid, &original.app,
+        true, &original.website, 0.08)
+}
+
 pub(super) unsafe fn geometry(
     config: &Config,
     app: &str,

@@ -15,6 +15,14 @@ pub const HOST_NAME: &str = "org.libretype.docs";
 pub const MAX_FRAME: usize = 8192;
 pub const MAX_AGE: Duration = Duration::from_millis(800);
 
+/// A posted edit invalidates the old text fingerprint before the next browser
+/// observation. This permits waiting only; callers still validate live focus,
+/// and no chunk may be confirmed or reposted without fresh native text/caret.
+pub fn may_wait_after_insertion(used_companion: bool, enabled: bool, elapsed: Duration, reason: &str) -> bool {
+    used_companion && enabled && elapsed < Duration::from_secs(1)
+        && matches!(reason, "Caret outside visible editor" | "Caret bounds unavailable" | "Text field bounds unavailable")
+}
+
 pub fn hash(text: &str) -> String {
     digest(&SHA256, text.as_bytes())
         .as_ref()
@@ -237,6 +245,29 @@ pub mod transport;
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn delayed_geometry_only_waits_for_known_docs_edits_and_never_reposts_a_chunk() {
+        use crate::acceptance::{AcceptancePlan, Observation};
+        let delay = Duration::from_millis(250);
+        assert!(may_wait_after_insertion(true, true, delay, "Caret outside visible editor"));
+        assert!(!may_wait_after_insertion(false, true, delay, "Caret outside visible editor"));
+        assert!(!may_wait_after_insertion(true, false, delay, "Caret outside visible editor"));
+        assert!(!may_wait_after_insertion(true, true, Duration::from_secs(1), "Caret outside visible editor"));
+        for reason in ["Secure input enabled", "Focus changed during capture", "Editable ancestor unavailable", "Application excluded"] {
+            assert!(!may_wait_after_insertion(true, true, delay, reason));
+        }
+        let mut plan = AcceptancePlan::new("We should ", "tomorrow.",
+            "meet in the small conference room ", true, true, false).unwrap();
+        let first = plan.next_chunk().unwrap();
+        // Several missing geometry observations cannot retry the posted chunk.
+        for _ in 0..3 {
+            assert!(may_wait_after_insertion(true, true, delay, "Caret bounds unavailable"));
+            assert!(plan.next_chunk().is_none());
+        }
+        assert_eq!(plan.observe(&format!("We should {first}"), "tomorrow."), Observation::Confirmed);
+        assert!(plan.next_chunk().is_some());
+        assert_eq!(plan.observe("unexpected writing", "tomorrow."), Observation::Diverged);
+    }
     fn sample() -> Snapshot {
         Snapshot {
             page_key: page_key("https://docs.google.com/document/d/synthetic_123/edit").unwrap(),

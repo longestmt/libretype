@@ -1,7 +1,8 @@
 # Optional Google Docs companion
 
-This integration is in development. It has not yet passed native end-to-end
-Google Docs testing. Keep using the standard app for the verified editors.
+This integration is in development. Basic suggestion display and Shift-Tab
+insertion have passed a native Google Docs check; full compatibility testing
+is still in progress.
 
 Google Docs draws a visible caret separately from its off-screen braille editing
 surface. The optional Chrome extension supplies geometry to the Rust application;
@@ -48,6 +49,14 @@ Selected-text alternatives, document tables, complex layout, zoom and window
 changes require explicit compatibility checks before broader support is claimed.
 
 ## Development validation
+
+Build 52 matched the visible Docs caret with native text and selection, generated
+a suggestion locally, and inserted it with Shift-Tab in a disposable document.
+The post-insertion check exposed a delay between the edit and the companion's
+new text fingerprint. The next build adds a bounded wait for that geometry
+refresh, restricted to an unchanged focused Docs editor. It never reposts a
+chunk. Native confirmation of that fix, repeated word acceptance, mid-line
+insertion, zoom/scroll, and disable/focus behavior remain to be checked.
 
 Run `cargo test --locked --offline`,
 `node --test tests/docs_companion.test.js`, and the Python packaging tests.
