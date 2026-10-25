@@ -87,7 +87,7 @@ def main():
         parser.error("First run cargo build --locked --release --example completion_probe")
     rows = processes()
     identities = {pid: rows[pid]["command"] for pid in (args.app_pid, args.server_pid)}
-    if Path(identities[args.app_pid]).name != "libretypist":
+    if Path(identities[args.app_pid]).name not in ("LibreType", "libretypist"):
         parser.error("App PID is not the LibreType executable")
     if Path(identities[args.server_pid]).name != "ollama":
         parser.error("Server PID is not the Ollama executable")

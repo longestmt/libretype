@@ -25,7 +25,9 @@ import uuid
 
 ROOT = Path(__file__).resolve().parent.parent
 APP_ID = "org.libretypist.app"
-EXECUTABLE = "libretypist"
+EXECUTABLE = "LibreType"
+BUILD_BINARY = "libretype"
+LEGACY_EXECUTABLE = "libretypist"
 APP_NAME = "LibreType.app"
 CODESIGN = "/usr/bin/codesign"
 
@@ -57,11 +59,13 @@ def metadata(app: Path):
         raise UpdateError(f"Invalid app metadata: {app}") from exc
     if not isinstance(info, dict):
         raise UpdateError("App metadata must be a dictionary")
-    expected = {"CFBundleIdentifier": APP_ID, "CFBundleExecutable": EXECUTABLE,
+    expected = {"CFBundleIdentifier": APP_ID,
                 "CFBundleName": "LibreType", "CFBundlePackageType": "APPL"}
-    if any(info.get(k) != v for k, v in expected.items()):
+    executable_name = info.get("CFBundleExecutable")
+    if (any(info.get(k) != v for k, v in expected.items())
+            or executable_name not in (EXECUTABLE, LEGACY_EXECUTABLE)):
         raise UpdateError("The bundle is not a LibreType app with the expected executable and identifier")
-    executable = app / "Contents/MacOS" / EXECUTABLE
+    executable = app / "Contents/MacOS" / executable_name
     if not executable.is_file() or not os.access(executable, os.X_OK):
         raise UpdateError("The app executable is missing or not executable")
     version = info.get("CFBundleShortVersionString", "")
@@ -89,6 +93,7 @@ def verify(app: Path):
     if not match:
         raise UpdateError("The app has no readable designated requirement")
     return {"version": info["CFBundleShortVersionString"], "build": info["CFBundleVersion"],
+            "executable": info["CFBundleExecutable"],
             "signing": kind, "requirement": match.group(1)}
 
 
@@ -159,11 +164,14 @@ def atomic_swap(first: Path, second: Path):
 
 def running_pids(destination: Path):
     """Check the kernel's executable path, not process names or command regexes."""
+    if not destination.exists() and not destination.is_symlink():
+        return []
+    executable_name = metadata(destination)["CFBundleExecutable"]
     lib = ctypes.CDLL("/usr/lib/libproc.dylib")
     query = lib.proc_pidpath
     query.argtypes = [ctypes.c_int, ctypes.c_void_p, ctypes.c_uint32]
     query.restype = ctypes.c_int
-    expected = (destination / "Contents/MacOS" / EXECUTABLE).resolve()
+    expected = (destination / "Contents/MacOS" / executable_name).resolve()
     pids = run(["/bin/ps", "-axo", "pid="]).stdout.split()
     matching = []
     for entry in pids:
@@ -290,7 +298,7 @@ def build(identity: str | None, build_number: str | None):
             (app / "Contents/MacOS").mkdir(parents=True)
             resources = app / "Contents/Resources"
             resources.mkdir()
-            shutil.copy2(ROOT / "target/release" / EXECUTABLE, app / "Contents/MacOS" / EXECUTABLE)
+            shutil.copy2(ROOT / "target/release" / BUILD_BINARY, app / "Contents/MacOS" / EXECUTABLE)
             info = plistlib.loads((ROOT / "packaging/Info.plist").read_bytes())
             cargo = tomllib.loads((ROOT / "Cargo.toml").read_text())
             info["CFBundleShortVersionString"] = cargo["package"]["version"]

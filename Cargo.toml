@@ -6,6 +6,10 @@ edition = "2021"
 description = "A local, subscription-free macOS typing assistant"
 license = "GPL-3.0-only"
 
+[[bin]]
+name = "libretype"
+path = "src/main.rs"
+
 [dependencies]
 libc = "0.2"
 ring = "0.17.14"

@@ -5,7 +5,7 @@
   <key>CFBundleName</key><string>LibreType</string>
   <key>CFBundleDisplayName</key><string>LibreType</string>
   <key>CFBundleIdentifier</key><string>org.libretypist.app</string>
-  <key>CFBundleExecutable</key><string>libretypist</string>
+  <key>CFBundleExecutable</key><string>LibreType</string>
   <key>CFBundlePackageType</key><string>APPL</string>
   <key>CFBundleShortVersionString</key><string>0.1.0</string>
   <key>CFBundleVersion</key><string>1</string>

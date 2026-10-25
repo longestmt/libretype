@@ -78,8 +78,9 @@ key is stored in macOS Keychain and records are encrypted locally. Screen contex
 requires the relevant macOS permission. Secure fields and excluded contexts are
 not eligible. Optional data sources should be enabled only when wanted.
 
-Legacy identifiers remain for existing installations: the executable is
-`libretypist`, bundle ID is `org.libretypist.app`, settings/history are under
+The bundled executable and process are named `LibreType`; the Cargo command-line
+binary is `libretype`. Legacy storage identifiers remain for existing installations:
+the bundle ID is `org.libretypist.app`, settings/history are under
 `~/Library/Application Support/LibreTypist`, and health diagnostics are under
 `~/Library/Caches/LibreTypist`. Health snapshots exclude typed text and completions.
 Do not publish those local directories.

@@ -36,15 +36,47 @@ class UpdateTests(unittest.TestCase):
     def tearDown(self):
         self.temp.cleanup()
 
-    def bundle(self, folder, number):
+    def bundle(self, folder, number, executable=b.EXECUTABLE):
         app = self.root / folder / b.APP_NAME
         (app / "Contents/MacOS").mkdir(parents=True)
-        shutil.copy2(self.binary, app / "Contents/MacOS" / b.EXECUTABLE)
+        shutil.copy2(self.binary, app / "Contents/MacOS" / executable)
         info = plistlib.loads((b.ROOT / "packaging/Info.plist").read_bytes())
         info["CFBundleVersion"] = number
+        info["CFBundleExecutable"] = executable
         (app / "Contents/Info.plist").write_bytes(plistlib.dumps(info))
         b.run([b.CODESIGN, "--force", "--sign", "-", "--identifier", b.APP_ID, app])
         return app
+
+    def test_executable_rename_stops_legacy_app_and_preserves_rollback(self):
+        legacy = self.bundle("legacy", "1", b.LEGACY_EXECUTABLE)
+        original = b.inventory_digest(legacy)
+        target = subprocess.Popen([str(legacy / "Contents/MacOS" / b.LEGACY_EXECUTABLE)])
+        unrelated = subprocess.Popen([str(self.binary)])
+        try:
+            with self.assertRaisesRegex(b.UpdateError, "running"):
+                b.install(self.new, legacy, allow_identity_change=True)
+            result = b.install(self.new, legacy, allow_identity_change=True, quit_app=True)
+            target.wait(timeout=2)
+            self.assertIsNone(unrelated.poll())
+            self.assertEqual(b.verify(legacy)["executable"], "LibreType")
+            self.assertFalse((legacy / "Contents/MacOS" / b.LEGACY_EXECUTABLE).exists())
+            backup = Path(result["backup"])
+            self.assertEqual(b.verify(backup)["executable"], "libretypist")
+            self.assertEqual(b.inventory_digest(backup), original)
+        finally:
+            for proc in (target, unrelated):
+                if proc.poll() is None:
+                    proc.terminate()
+                proc.wait(timeout=2)
+
+    def test_unrecognized_executable_names_are_rejected(self):
+        path = self.new / "Contents/Info.plist"
+        info = plistlib.loads(path.read_bytes())
+        for name in ("arbitrary", "../LibreType", "/tmp/LibreType"):
+            info["CFBundleExecutable"] = name
+            path.write_bytes(plistlib.dumps(info))
+            with self.assertRaisesRegex(b.UpdateError, "expected executable"):
+                b.metadata(self.new)
 
     def test_same_artifact_is_a_noop_and_matches_its_requirement(self):
         copy = self.root / "same" / b.APP_NAME
