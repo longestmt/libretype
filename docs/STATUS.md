@@ -65,7 +65,7 @@ in the disposable sheet, not every spreadsheet editor or cell configuration.
 
 That check also exposed an on-screen, zero-width editor being classified as
 visible. The current source rejects such editor bounds while preserving normal
-zero-width insertion carets. Visibility regressions pass. Build 45 is installed,
+zero-width insertion carets. Visibility regressions pass. Build 46 is installed,
 Accessibility is active, and its local preview and native mid-line insertion work.
 The zero-width proxy rejection itself still needs native verification.
 Unconfirmed-insertion diagnostics now distinguish unchanged text, a moved caret
@@ -98,15 +98,34 @@ omit regional spelling preferences and that profile influence can defeat an
 explicit spelling override in a tested context. Two prompt candidates were
 rejected; the reproducible probe and evidence are described in the same document.
 
-Still requiring broader validation:
+## Remaining work, in priority order
 
-- Learned-style quality and profile behavior across more editors and models.
-- More editor/focus/selection combinations, code-editor chat and source policies.
-- Live screen OCR context; it remains optional and off by default.
-- Terminal AI prompt adapters and multiplexer layouts beyond synthetic tests.
-- Consistent instruction compliance, grammar, latency, memory and battery use.
-- Actual login launch, clean-machine setup and additional model downloads.
-- Signed-upgrade Accessibility continuity, notarization and release delivery.
+1. **Personalization quality.** The native storage/profile lifecycle works, but
+   inferred spelling conventions and explicit-instruction priority have known
+   failures. Keep the frozen conflict cases alongside compatible-profile controls
+   when evaluating fixes; suppressing all personalization would not close this gap.
+   A candidate must then be checked on new writing contexts before recommending it.
+2. **Editor coverage.** Verify code-editor chat versus source policies and terminal
+   AI prompt/multiplexer layouts. Basic VSCodium source behavior and the reported
+   spreadsheet workflow are already verified; they do not establish these other
+   cases. Orca has no verified dedicated integration. Native verification of the
+   zero-width editor rejection also remains outstanding.
+3. **Optional live screen context.** Build 46's in-memory OCR sample recognized an
+   invented workshop notice and used its time in a completion. That verifies the
+   preview pipeline, not capture of another application's window. Live capture
+   still awaits explicit opt-in and macOS permission; the feature remains off.
+4. **Performance and setup.** Measure end-to-end typing latency and combined
+   application/model resource use under controlled conditions, then check actual
+   login launch and clean-machine setup. Existing request timings and the passive
+   process sample do not establish battery impact or a complete setup experience.
+5. **Release delivery.** Resolve the third-party notice and contributor-authority
+   gates documented in [release instructions](RELEASING.md), then verify signing,
+   upgrade Accessibility continuity, notarization and distribution. These are
+   release gates separate from editor feature implementation.
+
+Field-adjacent clickable controls are not implemented. Related actions are
+available through shortcuts and settings; previews remain non-interactive in
+accordance with the chosen interaction design.
 
 Google Docs support is deferred; any future companion must be optional.
 Cross-Mac synchronization is outside the project scope.

@@ -107,3 +107,21 @@ strength, request format or model-selection change was adopted. The 42 completio
 (seven baseline, seven per candidate, seven per Qwen model) had no transport errors.
 This remains a known model-compliance limitation, not a claim that every explicit
 preference is unreliable or that any model is universally preferable.
+
+### Larger-model follow-up
+
+Qwen3 8B completed the same seven frozen-profile cases after a production-worker
+download and local GGUF verification. It still returned `cheque` despite the
+American-spelling instruction and additionally returned `colour`, where the
+three previously tested models returned `color`. Influence Off returned `check`;
+recipient, sign-off and compatible-name cases returned the expected terms.
+All seven requests completed without transport errors. The median request took
+1.87 seconds and the first took 6.57 seconds; these are observations from one
+ordered run, not a controlled performance comparison.
+
+This gate provided no reason to replace the selected Gemma4 E4B model, so no
+broader writing benchmark or application model change followed. The evaluation
+model was unloaded after the check; its downloaded files remain available.
+The artifact was 5,225,388,164 bytes, Q4_K_M, with exact digest
+`500a1f067a9f782620b40bee6f7b0c89e17ae61f686b92c24933e4ca4b2b8b41`.
+Application settings, history and privacy controls were unchanged.
