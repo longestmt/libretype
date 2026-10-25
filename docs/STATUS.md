@@ -55,8 +55,13 @@ source also recognizes its exact DOM identifier and A1-style cell address in a
 known Chromium browser on the exact Sheets host. Compact recognized cells require
 manual activation. The address stays local to the activation key and is not
 included in prompts or diagnostics. Activation survives editor growth but is
-revoked on cell-address, position or focus changes. Regressions pass; native
-verification of this additional detection is pending.
+revoked on cell-address, position or focus changes. Regressions pass. In build 46,
+the user verified that Tab navigated out of the narrow cell without adding text,
+then manual activation displayed a suggestion and Shift-Tab inserted it. The
+cell's completed text was inspected and LibreType reported verified insertion.
+The temporary transition recorder had ended before that interaction, so its
+individual state changes were not captured. This verifies the reported workflow
+in the disposable sheet, not every spreadsheet editor or cell configuration.
 
 That check also exposed an on-screen, zero-width editor being classified as
 visible. The current source rejects such editor bounds while preserving normal
