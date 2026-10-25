@@ -52,13 +52,17 @@ pub(super) unsafe fn geometry(
     focused: &OwnedCf,
     pid: i32,
     text: &str,
-    caret: NSRect,
+    caret: (NSRect, usize),
     timeout: f32,
 ) -> Option<(NSRect, NSRect, f64)> {
     if !config.google_docs || app != "com.google.Chrome" {
         return None;
     }
+    let diagnostic = |state| CAPTURE_DETAIL.with(|d| d.borrow_mut().docs_companion = Some(state));
+    diagnostic("Waiting for companion geometry");
     let snapshot = CACHE.get()?.current()?;
+    CAPTURE_DETAIL.with(|d| d.borrow_mut().docs_selection_utf16 = Some([caret.1, snapshot.selection_utf16]));
+    diagnostic("Finding native Docs document");
     let started = Instant::now();
     let mut node = focused.clone();
     let mut seen = Vec::<OwnedCf>::new();
@@ -86,9 +90,9 @@ pub(super) unsafe fn geometry(
             }) {
                 if docs_bridge::page_key(&url).is_some() {
                     let viewport = element_bounds(node.0)?;
-                    return snapshot
-                        .resolve(&url, text, plain(caret), plain(viewport))
-                        .and_then(|(caret, field)| {
+                    let resolved = snapshot.resolve_checked(&url, text, plain(caret.0), plain(viewport), caret.1);
+                    diagnostic(match &resolved { Ok(_) => "Matched text and caret", Err(reason) => reason });
+                    return resolved.ok().and_then(|(caret, field)| {
                             // Metadata from the braille field is in CSS units.
                             // The resolved caret is in native screen points,
                             // including both document and browser zoom.

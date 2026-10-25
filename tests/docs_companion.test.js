@@ -25,7 +25,7 @@ function harness({automaticReplies=true}={}) {
   return {context,chrome,messages,ports,setActive(value){active=value},setFocused(value){focused=value}};
 }
 const sender=()=>({frameId:0,url,tab:{id:1,windowId:2}});
-const sample=()=>({type:'observe',snapshot:{page_key:'a'.repeat(64),text_hash:'b'.repeat(64),viewport:[1000,800],field:[50,120,900,680],caret:[300,200,2,18],proxy_caret:[150,-9990,0,18]}});
+const sample=()=>({type:'observe',snapshot:{page_key:'a'.repeat(64),text_hash:'b'.repeat(64),selection_utf16:19,viewport:[1000,800],field:[50,120,900,680],caret:[300,200,2,18],proxy_caret:[150,-9990,0,18]}});
 test('extension identity is derived from its public key and permissions stay Docs-only',()=>{
   const manifest=JSON.parse(fs.readFileSync(path.join(root,'manifest.json')));
   const id=crypto.createHash('sha256').update(Buffer.from(manifest.key,'base64')).digest('hex').slice(0,32).split('').map(c=>String.fromCharCode(97+parseInt(c,16))).join('');
@@ -51,6 +51,10 @@ test('unexpected text payloads and malformed fingerprints never reach the native
   const extra=sample();extra.snapshot.text='SYNTHETIC TEXT MUST NOT TRAVEL';
   const invalid=sample();invalid.snapshot.text_hash='not-a-fingerprint';
   for(const message of [extra,invalid,{type:'ping',text:'SYNTHETIC TEXT MUST NOT TRAVEL'}]) {
+    assert.equal((await h.context.route(message,sender())).accepted,false);
+  }
+  for(const offset of [-1,0.5,32769,null]) {
+    const message=sample();message.snapshot.selection_utf16=offset;
     assert.equal((await h.context.route(message,sender())).accepted,false);
   }
   assert.equal(h.messages.length,0);
@@ -93,11 +97,16 @@ function contentHarness() {
   state.caret=box(300,200,2,18);
   state.proxy=box(150,10,0,18);
   const anchor={};
+  const parts=()=>state.paragraphTexts || [state.text];
+  const paragraphs=()=>parts().map((text,index)=>({tagName:'P',innerText:text,textContent:text,
+    contains:node=>node===anchor && index===(state.paragraphIndex??parts().length-1)}));
   const editor={getAttribute:name=>name==='role'?'textbox':null,isContentEditable:true,
-    contains:node=>node===anchor,get innerText(){state.reads++;return state.text}};
+    contains:node=>node===anchor,get children(){return paragraphs()},get innerText(){state.reads++;return state.text}};
   const selection={get isCollapsed(){return state.collapsed},rangeCount:1,anchorNode:anchor,
+    get anchorOffset(){return state.anchorOffset??parts()[state.paragraphIndex??parts().length-1].length},
     getRangeAt:()=>({getBoundingClientRect:()=>({...state.proxy})})};
-  const frame={contentDocument:{activeElement:editor,getSelection:()=>selection},
+  const frame={contentDocument:{activeElement:editor,getSelection:()=>selection,
+    createRange:()=>{let paragraph,end;return {selectNodeContents:p=>{paragraph=p},setEnd:(_node,offset)=>{end=offset},toString:()=>paragraph.textContent.slice(0,end)}}},
     getBoundingClientRect:()=>box(0,-10000,1000,1)};
   const cursor={getBoundingClientRect:()=>({...state.caret})};
   const field={getBoundingClientRect:()=>box(50,120,900,680)};
@@ -124,6 +133,7 @@ test('content adapter sends matching geometry and fingerprints without plaintext
   assert.equal(snapshot.page_key,crypto.createHash('sha256').update(url).digest('hex'));
   assert.deepEqual(snapshot.proxy_caret,[150,-9990,0,18]);
   assert.deepEqual(snapshot.caret,[300,200,2,18]);
+  assert.equal(snapshot.selection_utf16,h.state.text.length);
   assert.equal(JSON.stringify(h.messages).includes('synthetic paragraph'),false);
 });
 test('disabled or unfocused companion does not read editor text',async()=>{
@@ -152,4 +162,20 @@ test('focus, visibility, and page exit events immediately clear prior geometry',
   const h=contentHarness();await h.tick();h.messages.length=0;
   for(const event of ['blur','visibilitychange','pagehide']) h.listeners[event]();
   assert.deepEqual(h.messages.map(m=>m.type),['clear','clear','clear']);
+});
+test('paragraph-window offsets preserve blank lines, UTF-16 emoji, and mid-line positions',async()=>{
+  const h=contentHarness();
+  h.state.paragraphTexts=['Earlier 👩‍💻 paragraph.','','We should tomorrow.'];
+  h.state.text=h.state.paragraphTexts.join('\n\n');
+  h.state.anchorOffset='We should '.length;
+  await h.tick();
+  assert.equal(h.messages[1].snapshot.selection_utf16,'Earlier 👩‍💻 paragraph.\n\n\n\nWe should '.length);
+  h.messages.length=0;
+  h.state.text='Unexpected block separators';
+  await h.tick();
+  assert.deepEqual(h.messages.map(m=>m.type),['ping','clear']);
+});
+test('a caret-only change during hashing invalidates otherwise identical geometry',async()=>{
+  const h=contentHarness();h.state.onHash=()=>{delete h.state.onHash;h.state.anchorOffset=2};
+  await h.tick();assert.deepEqual(h.messages.map(m=>m.type),['ping','clear']);
 });

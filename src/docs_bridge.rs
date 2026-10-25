@@ -108,6 +108,7 @@ impl Rect {
 pub struct Snapshot {
     pub page_key: String,
     pub text_hash: String,
+    pub selection_utf16: usize,
     pub viewport: [f64; 2],
     pub field: Rect,
     pub caret: Rect,
@@ -116,7 +117,7 @@ pub struct Snapshot {
 impl Snapshot {
     pub fn valid(&self) -> bool {
         let [width, height] = self.viewport;
-        fingerprint(&self.page_key) && fingerprint(&self.text_hash)
+        fingerprint(&self.page_key) && fingerprint(&self.text_hash) && self.selection_utf16 <= 32768
             && width.is_finite() && height.is_finite()
             && (100. ..=20_000.).contains(&width) && (100. ..=20_000.).contains(&height)
             && Rect(0.,0.,width,height).contains(self.field) && self.field.contains(self.caret)
@@ -132,31 +133,52 @@ impl Snapshot {
         text: &str,
         native_proxy: Rect,
         native_viewport: Rect,
+        native_selection: usize,
     ) -> Option<(Rect, Rect)> {
+        self.resolve_checked(page, text, native_proxy, native_viewport, native_selection).ok()
+    }
+    pub fn resolve_checked(
+        &self,
+        page: &str,
+        text: &str,
+        native_proxy: Rect,
+        native_viewport: Rect,
+        native_selection: usize,
+    ) -> Result<(Rect, Rect), &'static str> {
         if !self.valid()
             || !native_proxy.valid()
             || !native_viewport.valid()
-            || page_key(page).as_deref() != Some(self.page_key.as_str())
-            || text.len() > 128 * 1024
-            || hash(text) != self.text_hash
         {
-            return None;
+            return Err("Invalid companion or native geometry");
+        }
+        if page_key(page).as_deref() != Some(self.page_key.as_str()) {
+            return Err("Document identity mismatch");
+        }
+        if text.len() > 128 * 1024 || hash(text) != self.text_hash {
+            return Err("Accessible text fingerprint mismatch");
+        }
+        if self.selection_utf16 != native_selection || native_selection > text.encode_utf16().count() {
+            return Err("Caret offset mismatch");
         }
         let xscale = native_viewport.2 / self.viewport[0];
         let yscale = native_viewport.3 / self.viewport[1];
         if !(0.25..=4.).contains(&xscale) || (xscale - yscale).abs() > 0.02 * xscale {
-            return None;
+            return Err("Viewport scale mismatch");
         }
         let proxy = self.proxy_caret.mapped(native_viewport, xscale);
-        if (proxy.0 - native_proxy.0).abs() > 2.
-            || (proxy.1 - native_proxy.1).abs() > 2.
+        // Chromium's off-screen braille coordinates can diverge from DOM
+        // coordinates as Docs shifts its paragraph window. The exact text and
+        // UTF-16 caret match above establish identity; retain the hidden-surface
+        // and font-height checks instead of relying on those X/Y coordinates.
+        if (native_proxy.1 - native_viewport.1) / xscale >= -1000.
             || (proxy.3 - native_proxy.3).abs() > 3.
         {
-            return None;
+            return Err("Hidden caret bounds mismatch");
         }
         let caret = self.caret.mapped(native_viewport, xscale);
         let field = self.field.mapped(native_viewport, xscale);
         (native_viewport.contains(field) && field.contains(caret)).then_some((caret, field))
+            .ok_or("Companion caret outside viewport")
     }
 }
 
@@ -304,6 +326,7 @@ mod tests {
         Snapshot {
             page_key: page_key("https://docs.google.com/document/d/synthetic_123/edit").unwrap(),
             text_hash: hash("Thank you for your\u{a0}"),
+            selection_utf16: 19,
             viewport: [1000., 800.],
             field: Rect(50., 120., 900., 680.),
             caret: Rect(300., 200., 2., 18.),
@@ -317,7 +340,7 @@ mod tests {
         let viewport = Rect(40., 80., 1000., 800.);
         let proxy = Rect(190., -9910., 0., 18.);
         assert_eq!(
-            s.resolve(page, "Thank you for your\u{a0}", proxy, viewport),
+            s.resolve(page, "Thank you for your\u{a0}", proxy, viewport, 19),
             Some((Rect(340., 280., 2., 18.), Rect(90., 200., 900., 680.)))
         );
         for wrong in [
@@ -327,18 +350,19 @@ mod tests {
             "https://user@docs.google.com/document/d/synthetic_123/edit",
         ] {
             assert!(s
-                .resolve(wrong, "Thank you for your\u{a0}", proxy, viewport)
+                .resolve(wrong, "Thank you for your\u{a0}", proxy, viewport, 19)
                 .is_none());
         }
         assert!(s
-            .resolve(page, "Changed writing", proxy, viewport)
+            .resolve(page, "Changed writing", proxy, viewport, 19)
             .is_none());
         assert!(s
             .resolve(
                 page,
                 "Thank you for your\u{a0}",
-                Rect(195., -9910., 0., 18.),
-                viewport
+                proxy,
+                viewport,
+                18
             )
             .is_none());
         assert!(s
@@ -346,9 +370,14 @@ mod tests {
                 page,
                 "Thank you for your\u{a0}",
                 proxy,
-                Rect(40., 80., 1000., 400.)
+                Rect(40., 80., 1000., 400.),
+                19
             )
             .is_none());
+        // A shifted hidden paragraph window is safe only with exact current
+        // text and caret identity; a visible native control must never match.
+        assert!(s.resolve(page, "Thank you for your\u{a0}", Rect(250., -9500., 0., 18.), viewport, 19).is_some());
+        assert!(s.resolve(page, "Thank you for your\u{a0}", Rect(250., 200., 0., 18.), viewport, 19).is_none());
     }
     #[test]
     fn off_stale_cleared_or_invalid_snapshots_never_override_native_geometry() {

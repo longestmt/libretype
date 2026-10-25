@@ -484,6 +484,8 @@ thread_local! {
 #[derive(Default, serde::Serialize)]
 struct CaptureDetail {
     role: String,
+    docs_companion: Option<&'static str>,
+    docs_selection_utf16: Option<[usize; 2]>,
     cell_context: Option<&'static str>,
     code_editor_kind: Option<&'static str>,
     caret_source: &'static str,
@@ -771,7 +773,7 @@ unsafe fn capture_inner(
     let mut field_bounds = element_bounds(element.0)?;
     let mut docs_geometry = None;
     if range.length == 0 && website.as_deref() == Some("docs.google.com") {
-        if let Some((visible_caret, visible_field, font_scale)) = docs::geometry(config, &app, &focused, pid, &text, caret, timeout) {
+        if let Some((visible_caret, visible_field, font_scale)) = docs::geometry(config, &app, &focused, pid, &text, (caret, pos), timeout) {
             docs_geometry = Some(font_scale);
             caret = visible_caret;
             field_bounds = visible_field;

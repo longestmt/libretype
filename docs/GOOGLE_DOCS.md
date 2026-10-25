@@ -29,8 +29,8 @@ accessibility settings, which may also be used by other assistive software.
 
 ## Data and boundaries
 
-The extension sends viewport, editor and caret rectangles plus SHA-256
-fingerprints of the document path and accessible text. It does not transmit the
+The extension sends viewport, editor and caret rectangles, a UTF-16 caret offset,
+and SHA-256 fingerprints of the document path and accessible text. It does not transmit the
 text itself, edit the document, handle acceptance keys, use the clipboard, or
 open a network service. Fingerprints are still derived from document data; they
 are transient and are not included in application diagnostics or saved history.
@@ -40,7 +40,8 @@ allowed. The host forwards bounded messages through a private user-owned Unix
 socket to LibreType; it does not use Accessibility itself. Companion messages
 expire after 800 ms and are accepted only when the app setting is enabled.
 LibreType additionally requires the foreground Chrome document, native text
-fingerprint, native proxy caret and viewport scale to match. Existing secure-input,
+fingerprint, exact caret offset, hidden editing surface and viewport scale to
+match. Existing secure-input,
 website exclusion and focus checks remain in force. Unsupported geometry stays
 unsupported; it does not enable a guessed caret or insertion fallback.
 
@@ -62,9 +63,18 @@ existing suffix and was verified natively. The Off control stopped companion
 messages and hid suggestions; it was re-enabled after the check.
 
 At 150% document zoom, caret mapping worked but the reported font size remained
-unzoomed. The next build scales that metadata using the paired visible/braille
-caret geometry. Native validation of font scaling, longer suggestions requiring
-multiple chunks, scrolling, and additional focus transitions remains pending.
+unzoomed. Build 54 scales that metadata using paired visible/braille caret
+geometry. Native checks showed approximately 15 points at 100% and 22.5 points
+at 150%; the document was restored to 100% afterward.
+
+A 60-paragraph scrolling check exposed a rejected mapping when Docs changes
+the paragraph window it exposes. The next build and companion 0.1.1 match the
+exact UTF-16 caret offset against the same text fingerprint. The adapter first
+checks that the paragraph text and separators reconstruct the complete
+accessible value; an unsupported structure yields no geometry. Text-free
+diagnostics identify mismatched text, caret offsets, viewport or hidden bounds.
+The scrolling fix, longer suggestions requiring multiple chunks, browser zoom,
+and additional focus transitions still require native validation.
 
 Run `cargo test --locked --offline`,
 `node --test tests/docs_companion.test.js`, and the Python packaging tests.

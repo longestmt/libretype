@@ -54,8 +54,9 @@ async function route(message, sender) {
   if (message.type === 'observe') {
     const s=message.snapshot;
     if (!s || Object.keys(message).some(k=>!['type','snapshot'].includes(k))
-      || Object.keys(s).sort().join(',')!=='caret,field,page_key,proxy_caret,text_hash,viewport'
+      || Object.keys(s).sort().join(',')!=='caret,field,page_key,proxy_caret,selection_utf16,text_hash,viewport'
       || !/^[a-f0-9]{64}$/.test(s.page_key) || !/^[a-f0-9]{64}$/.test(s.text_hash)
+      || !Number.isInteger(s.selection_utf16) || s.selection_utf16<0 || s.selection_utf16>32768
       || ![s.caret,s.field,s.proxy_caret].every(r=>Array.isArray(r)&&r.length===4&&r.every(Number.isFinite))
       || !Array.isArray(s.viewport) || s.viewport.length!==2 || !s.viewport.every(Number.isFinite)) return unavailable();
     return native({type:'observe',snapshot:s});
