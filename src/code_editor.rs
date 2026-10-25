@@ -88,9 +88,84 @@ pub fn automatic(kind: InputKind, source_enabled: bool) -> bool {
     kind == InputKind::Chat || (kind == InputKind::Source && source_enabled)
 }
 
+/// Recognize a known extension's composer, not every editable webview control.
+/// The URL is the nearest owning web area, never a neighboring pane or tab.
+pub fn extension_chat(path: &[Vec<String>], document_url: &str) -> bool {
+    let Ok(url) = url::Url::parse(document_url) else {
+        return false;
+    };
+    if url.scheme() != "vscode-webview"
+        || url.host_str().is_none()
+        || url.path() != "/index.html"
+        || !url.username().is_empty()
+        || url.password().is_some()
+    {
+        return false;
+    }
+    let mut extensions = url.query_pairs().filter(|(key, _)| key == "extensionId");
+    if extensions
+        .next()
+        .is_none_or(|(_, value)| value != "rjmacarthy.twinny")
+        || extensions.next().is_some()
+    {
+        return false;
+    }
+    let has =
+        |classes: &[String], wanted: &str| classes.iter().take(64).any(|class| class == wanted);
+    if !path
+        .first()
+        .is_some_and(|classes| has(classes, "ProseMirror"))
+    {
+        return false;
+    }
+    let mut composer = false;
+    for classes in path.iter().take(12) {
+        if has(classes, "message_tiptap") || has(classes, "xterm") {
+            return false;
+        }
+        composer |= has(classes, "chat_tiptap") || has(classes, "chat_chatBox");
+    }
+    composer
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn extension_composer_requires_owning_origin_and_focused_input() {
+        let url = "vscode-webview://synthetic/index.html?id=fixture&extensionId=rjmacarthy.twinny";
+        let path = vec![
+            vec!["tiptap".into(), "ProseMirror".into()],
+            vec!["chat_tiptap".into()],
+        ];
+        assert!(extension_chat(&path, url));
+        // AX may omit the inner wrapper; the owning composer is also specific.
+        let outer = vec![path[0].clone(), vec!["chat_chatBox".into()]];
+        assert!(extension_chat(&outer, url));
+        for wrong_url in [
+            "https://synthetic/index.html?extensionId=rjmacarthy.twinny",
+            "vscode-webview://synthetic/settings.html?extensionId=rjmacarthy.twinny",
+            "vscode-webview://synthetic/index.html?extensionId=rjmacarthy.twinny.fake",
+            "vscode-webview://synthetic/index.html?extensionId=other&extensionId=rjmacarthy.twinny",
+            "vscode-webview://synthetic/index.html?extensionId=rjmacarthy.twinny&extensionId=other",
+            "vscode-webview://synthetic/index.html",
+        ] {
+            assert!(!extension_chat(&path, wrong_url));
+        }
+        for wrong_path in [
+            vec![vec!["provider-model".into()], vec!["chat_chatBox".into()]],
+            vec![path[0].clone(), vec!["message_tiptap".into()]],
+            vec![path[0].clone(), vec!["chat_tiptap-neighbor".into()]],
+            vec![path[0].clone()],
+            vec![
+                path[0].clone(),
+                vec!["message_tiptap".into()],
+                path[1].clone(),
+            ],
+        ] {
+            assert!(!extension_chat(&wrong_path, url));
+        }
+    }
     #[test]
     fn modern_native_edit_contexts_keep_source_and_chat_scopes_separate() {
         let path = |parts: &[&str]| {

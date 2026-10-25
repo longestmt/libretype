@@ -482,6 +482,7 @@ thread_local! {
 struct CaptureDetail {
     role: String,
     cell_context: Option<&'static str>,
+    code_editor_kind: Option<&'static str>,
     caret_source: &'static str,
     range_bounds: Option<i32>,
     marker_selection: Option<i32>,

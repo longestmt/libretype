@@ -33,9 +33,16 @@ unsafe fn bounds(element: &OwnedCf) -> Option<NSRect> {
     .then_some(rect)
 }
 
-unsafe fn class_path(element: &OwnedCf, pid: i32) -> (Vec<Vec<String>>, Option<NSRect>) {
+struct EditorPath {
+    classes: Vec<Vec<String>>,
+    viewport: Option<NSRect>,
+    extension_chat: bool,
+}
+
+unsafe fn class_path(element: &OwnedCf, pid: i32) -> EditorPath {
     let mut path = Vec::new();
     let mut viewport = None;
+    let mut extension_chat = false;
     let mut node = element.clone();
     let mut seen: Vec<OwnedCf> = Vec::new();
     let start = Instant::now();
@@ -75,6 +82,21 @@ unsafe fn class_path(element: &OwnedCf, pid: i32) -> (Vec<Vec<String>>, Option<N
             viewport = bounds(&node);
         }
         path.push(classes);
+        let role = attr(node.0, "AXRole").and_then(|v| string(v.0));
+        if role.as_deref() == Some("AXWebArea") {
+            let url = attr(node.0, "AXURL").and_then(|v| {
+                if CFGetTypeID(v.0) == CFURLGetTypeID() {
+                    string(CFURLGetString(v.0))
+                } else {
+                    string(v.0)
+                }
+            });
+            extension_chat = url
+                .as_deref()
+                .is_some_and(|url| crate::code_editor::extension_chat(&path, url));
+            // A nested document cannot borrow its parent's extension identity.
+            break;
+        }
         if crate::code_editor::classify_path(&[], &path) != crate::code_editor::InputKind::Other {
             break;
         }
@@ -84,7 +106,11 @@ unsafe fn class_path(element: &OwnedCf, pid: i32) -> (Vec<Vec<String>>, Option<N
         seen.push(node);
         node = parent;
     }
-    (path, viewport)
+    EditorPath {
+        classes: path,
+        viewport,
+        extension_chat,
+    }
 }
 
 pub(super) unsafe fn policy(
@@ -111,8 +137,20 @@ pub(super) unsafe fn policy(
         })
         .map(|s| if s.len() <= 2048 { s } else { String::new() })
         .collect();
-    let (path, viewport) = class_path(element, pid);
-    let kind = crate::code_editor::classify_path(&labels, &path);
+    let path = class_path(element, pid);
+    let kind = if path.extension_chat {
+        crate::code_editor::InputKind::Chat
+    } else {
+        crate::code_editor::classify_path(&labels, &path.classes)
+    };
+    CAPTURE_DETAIL.with(|d| {
+        d.borrow_mut().code_editor_kind = Some(match kind {
+            crate::code_editor::InputKind::Chat if path.extension_chat => "extension chat",
+            crate::code_editor::InputKind::Chat => "chat",
+            crate::code_editor::InputKind::Source => "source",
+            crate::code_editor::InputKind::Other => "other",
+        })
+    });
     let allowed = MANUAL.with(|state| {
         let mut lease = state.borrow_mut();
         let matches = lease.as_ref().is_some_and(|old| {
@@ -142,7 +180,7 @@ pub(super) unsafe fn policy(
     Policy {
         allowed,
         viewport: if allowed && kind != crate::code_editor::InputKind::Other {
-            viewport
+            path.viewport
         } else {
             None
         },

@@ -1,6 +1,6 @@
 # Status and limitations
 
-As of 2026-10-24, the current source passes 225 deterministic Rust tests.
+As of 2026-10-24, the current source passes 226 deterministic Rust tests.
 Optional live tests are ignored by default and need deliberate execution.
 
 Verified workflows include basic suggestion display/acceptance in the tested
@@ -65,8 +65,8 @@ in the disposable sheet, not every spreadsheet editor or cell configuration.
 
 That check also exposed an on-screen, zero-width editor being classified as
 visible. The current source rejects such editor bounds while preserving normal
-zero-width insertion carets. Visibility regressions pass. Build 46 is installed,
-Accessibility is active, and its local preview and native mid-line insertion work.
+zero-width insertion carets. Visibility regressions pass. Build 46's local preview
+and native mid-line insertion were verified with Accessibility active.
 The zero-width proxy rejection itself still needs native verification.
 Unconfirmed-insertion diagnostics now distinguish unchanged text, a moved caret
 with the expected full text, and differing prefix/suffix text. These labels
@@ -97,6 +97,18 @@ An additional synthetic personalization check found that learned profiles can
 omit regional spelling preferences and that profile influence can defeat an
 explicit spelling override in a tested context. Two prompt candidates were
 rejected; the reproducible probe and evidence are described in the same document.
+
+An unsent synthetic draft in VSCodium's Twinny chat exposed a separate routing
+gap: its webview composer was classified as an unknown code-editor field and
+required manual activation. Build 47 recognizes the focused ProseMirror composer
+only with a specific composer ancestor and the nearest web area's exact Twinny
+extension identity. Model settings, transcript editors, unrelated origins and
+similarly named classes are rejected by regression checks. The identifiers came
+from a read-only packaged-interface inspection; no extension implementation was
+copied. A text-free diagnostic distinguishes source, chat, extension chat and
+other controls. Build 47 is installed and awaits renewed Accessibility approval
+before native verification; automatic display and insertion in this extension
+are not yet claimed as working.
 
 ## Remaining work, in priority order
 
