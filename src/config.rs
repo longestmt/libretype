@@ -15,6 +15,7 @@ pub struct Config {
     pub delay_ms: u64,
     pub max_words: usize,
     pub midline: bool,
+    pub google_docs: bool,
     pub writing_instructions: String,
     pub blocked_apps: Vec<String>,
     pub app_rules: HashMap<String, AppRule>,
@@ -88,6 +89,7 @@ impl Default for Config {
             delay_ms: 250,
             max_words: 8,
             midline: true,
+            google_docs: false,
             writing_instructions: String::new(),
             blocked_apps: [
                 "com.apple.Terminal",
@@ -743,6 +745,17 @@ mod tests {
         assert_eq!(restored.spelling.language, "en_US");
         config.spelling.language = "en\nUS".into();
         assert!(config.validate().is_err());
+    }
+
+    #[test]
+    fn docs_companion_requires_explicit_opt_in_and_roundtrips() {
+        let mut config: Config = serde_json::from_str(r#"{"enabled":true}"#).unwrap();
+        assert!(!config.google_docs);
+        config.google_docs = true;
+        let restored: Config = serde_json::from_str(&serde_json::to_string(&config).unwrap()).unwrap();
+        assert!(restored.google_docs);
+        config.google_docs = false;
+        assert!(!serde_json::from_str::<Config>(&serde_json::to_string(&config).unwrap()).unwrap().google_docs);
     }
 
     #[test]

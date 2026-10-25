@@ -27,6 +27,8 @@ ROOT = Path(__file__).resolve().parent.parent
 APP_ID = "org.libretypist.app"
 EXECUTABLE = "LibreType"
 BUILD_BINARY = "libretype"
+DOCS_BINARY = "libretype-docs-bridge"
+DOCS_EXECUTABLE = "LibreTypeDocsBridge"
 LEGACY_EXECUTABLE = "libretypist"
 APP_NAME = "LibreType.app"
 CODESIGN = "/usr/bin/codesign"
@@ -299,6 +301,13 @@ def build(identity: str | None, build_number: str | None):
             resources = app / "Contents/Resources"
             resources.mkdir()
             shutil.copy2(ROOT / "target/release" / BUILD_BINARY, app / "Contents/MacOS" / EXECUTABLE)
+            shutil.copy2(ROOT / "target/release" / DOCS_BINARY, app / "Contents/MacOS" / DOCS_EXECUTABLE)
+            companion = resources / "GoogleDocsCompanion"
+            companion.mkdir()
+            for name in ("manifest.json", "extension-id.txt", "background.js", "content.js", "popup.html", "popup.js"):
+                shutil.copy2(ROOT / "companion/google-docs" / name, companion / name)
+            shutil.copy2(ROOT / "LICENSE", companion / "LICENSE.txt")
+            shutil.copy2(ROOT / "COPYRIGHT", companion / "COPYRIGHT")
             info = plistlib.loads((ROOT / "packaging/Info.plist").read_bytes())
             cargo = tomllib.loads((ROOT / "Cargo.toml").read_text())
             info["CFBundleShortVersionString"] = cargo["package"]["version"]
@@ -329,6 +338,10 @@ def build(identity: str | None, build_number: str | None):
             args = [CODESIGN, "--force", "--sign", identity or "-", "--identifier", APP_ID]
             if identity:
                 args += ["--options", "runtime", "--timestamp"]
+            helper_args = [CODESIGN, "--force", "--sign", identity or "-", "--identifier", "org.libretype.docsbridge"]
+            if identity:
+                helper_args += ["--options", "runtime", "--timestamp"]
+            run([*helper_args, app / "Contents/MacOS" / DOCS_EXECUTABLE])
             run([*args, app])
             new = verify(app)
             if identity and new["signing"] != "certificate":

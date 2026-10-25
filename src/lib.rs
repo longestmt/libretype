@@ -6,6 +6,7 @@ pub mod background;
 pub mod code_editor;
 pub mod config;
 pub mod core;
+pub mod docs_bridge;
 pub mod emoji;
 pub mod history;
 mod local_http;

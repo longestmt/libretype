@@ -13,6 +13,8 @@ use crate::native_abi::{id, nil, NSPoint, NSRect, NSSize};
 use objc::declare::ClassDecl;
 use objc::runtime::{Object, Sel, BOOL, NO, YES};
 use objc::{class, msg_send, sel, sel_impl};
+#[path = "native_docs.rs"]
+mod docs;
 use std::{
     cell::{Cell, RefCell},
     collections::{BTreeMap, HashMap, VecDeque},
@@ -645,6 +647,7 @@ unsafe fn capture_inner(
     // rules apply to recognized browsers, not to those desktop app internals.
     let spreadsheet_address = cells::spreadsheet_editor(&app, &element);
     let needs_website = (spreadsheet_address.is_some()
+        || (config.google_docs && app == "com.google.Chrome")
         || !config.website_rules.is_empty()
         || config.background.clipboard
         || config.background.screen
@@ -764,6 +767,13 @@ unsafe fn capture_inner(
     }
     capture_status("Text field bounds unavailable");
     let mut field_bounds = element_bounds(element.0)?;
+    if range.length == 0 && website.as_deref() == Some("docs.google.com") {
+        if let Some((visible_caret, visible_field)) = docs::geometry(config, &app, &focused, pid, &text, caret, timeout) {
+            caret = visible_caret;
+            field_bounds = visible_field;
+            CAPTURE_DETAIL.with(|d| d.borrow_mut().caret_source = "Google Docs companion");
+        }
+    }
     if let Some(viewport) = editor_policy.viewport {
         if let Some(expanded) = code_editor::display_bounds(field_bounds, caret, viewport) {
             field_bounds = expanded;
@@ -1946,6 +1956,7 @@ impl State {
         }
     }
     unsafe fn tick(&mut self) {
+        docs::sync_enabled(&self.config);
         self.paused_apps.retain(|_, until| *until > Instant::now());
         self.process_control();
         self.statistics.poll();
@@ -2588,6 +2599,8 @@ extern "C" fn on_save_instructions(_: &Object, _: Sel, _: id) {
                 let mut updated = s.config.clone();
                 let midline: isize = msg_send![s.settings.midline, state];
                 updated.midline = midline == 1;
+                let google_docs: isize = msg_send![s.settings.google_docs, state];
+                updated.google_docs = google_docs == 1;
                 s.remember_instruction_draft();
                 for (app, instructions) in &s.instruction_drafts {
                     if app.is_empty() {
@@ -2920,6 +2933,7 @@ struct SettingsUi {
     input: id,
     suffix: id,
     midline: id,
+    google_docs: id,
     word_shortcut: id,
     code_editor: id,
     append_instructions: id,
@@ -3213,10 +3227,17 @@ unsafe fn setup_window(target: id, config: &Config) -> SettingsUi {
     let _: () = msg_send![midline, setState:if config.midline { 1isize } else { 0isize }];
     let _: () = msg_send![view, addSubview:midline];
     let _: () = msg_send![midline, release];
+    let google_docs: id = msg_send![class!(NSButton), alloc];
+    let google_docs: id = msg_send![google_docs, initWithFrame:NSRect::new(NSPoint::new(24.,55.),NSSize::new(550.,22.))];
+    let _: () = msg_send![google_docs,setButtonType:3usize];
+    set_title(google_docs,"Enable optional Google Docs companion (Chrome extension required)");
+    let _: () = msg_send![google_docs,setState:if config.google_docs {1isize} else {0isize}];
+    let _: () = msg_send![view,addSubview:google_docs];
+    let _: () = msg_send![google_docs,release];
     let status = label(
         view,
         "Settings stay on this Mac.",
-        NSRect::new(NSPoint::new(24., 12.), NSSize::new(405., 52.)),
+        NSRect::new(NSPoint::new(24., 10.), NSSize::new(405., 36.)),
         12.,
     );
     button(
@@ -3231,6 +3252,7 @@ unsafe fn setup_window(target: id, config: &Config) -> SettingsUi {
         input,
         suffix,
         midline,
+        google_docs,
         word_shortcut,
         code_editor,
         append_instructions,
@@ -3255,6 +3277,7 @@ pub fn run() -> Result<(), String> {
         return Err("Could not install the application shutdown handler".into());
     }
     let config = Config::load()?;
+    let _docs_server = docs::start(&config);
     let (tx, rx) = mpsc::sync_channel::<(Config, CompletionRequest)>(1);
     let (reply_tx, replies) = mpsc::channel();
     let epoch = Arc::new(AtomicU64::new(1));

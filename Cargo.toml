@@ -3,12 +3,17 @@
 name = "libretypist"
 version = "0.1.0"
 edition = "2021"
+default-run = "libretype"
 description = "A local, subscription-free macOS typing assistant"
 license = "GPL-3.0-only"
 
 [[bin]]
 name = "libretype"
 path = "src/main.rs"
+
+[[bin]]
+name = "libretype-docs-bridge"
+path = "src/docs_host.rs"
 
 [dependencies]
 libc = "0.2"

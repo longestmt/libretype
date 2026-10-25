@@ -1,0 +1,85 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (c) 2026 LibreTypist contributors
+//! Optional geometry correction for the verified off-screen Docs braille editor.
+use super::*;
+use crate::docs_bridge::{self, transport::Server, Cache, Rect};
+use std::sync::OnceLock;
+
+static CACHE: OnceLock<Arc<Cache>> = OnceLock::new();
+
+pub(super) fn start(config: &Config) -> Option<Server> {
+    let server = Server::bind(docs_bridge::transport::socket_path().ok()?).ok()?;
+    server
+        .cache
+        .set_enabled(config.enabled && config.google_docs);
+    CACHE.set(server.cache.clone()).ok()?;
+    Some(server)
+}
+pub(super) fn sync_enabled(config: &Config) {
+    if let Some(cache) = CACHE.get() {
+        cache.set_enabled(config.enabled && config.google_docs);
+    }
+}
+fn plain(rect: NSRect) -> Rect {
+    Rect(
+        rect.origin.x,
+        rect.origin.y,
+        rect.size.width,
+        rect.size.height,
+    )
+}
+fn native(rect: Rect) -> NSRect {
+    NSRect::new(NSPoint::new(rect.0, rect.1), NSSize::new(rect.2, rect.3))
+}
+
+pub(super) unsafe fn geometry(
+    config: &Config,
+    app: &str,
+    focused: &OwnedCf,
+    pid: i32,
+    text: &str,
+    caret: NSRect,
+    timeout: f32,
+) -> Option<(NSRect, NSRect)> {
+    if !config.google_docs || app != "com.google.Chrome" {
+        return None;
+    }
+    let snapshot = CACHE.get()?.current()?;
+    let started = Instant::now();
+    let mut node = focused.clone();
+    let mut seen = Vec::<OwnedCf>::new();
+    for _ in 0..32 {
+        if started.elapsed() > Duration::from_secs_f32(timeout.max(0.005))
+            || seen.iter().any(|old| CFEqual(old.0, node.0))
+        {
+            return None;
+        }
+        let mut node_pid = 0;
+        if AXUIElementGetPid(node.0, &mut node_pid) != 0 || node_pid != pid {
+            return None;
+        }
+        let role = string(attr(node.0, "AXRole")?.0)?;
+        if matches!(role.as_str(), "AXWindow" | "AXApplication") {
+            return None;
+        }
+        if role == "AXWebArea" {
+            if let Some(url) = attr(node.0, "AXURL").and_then(|v| {
+                if CFGetTypeID(v.0) == CFURLGetTypeID() {
+                    string(CFURLGetString(v.0))
+                } else {
+                    string(v.0)
+                }
+            }) {
+                if docs_bridge::page_key(&url).is_some() {
+                    let viewport = element_bounds(node.0)?;
+                    return snapshot
+                        .resolve(&url, text, plain(caret), plain(viewport))
+                        .map(|(caret, field)| (native(caret), native(field)));
+                }
+            }
+        }
+        seen.push(node.clone());
+        node = attr(node.0, "AXParent")?;
+    }
+    None
+}

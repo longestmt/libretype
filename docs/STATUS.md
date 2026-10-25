@@ -162,7 +162,8 @@ Field-adjacent clickable controls are not implemented. Related actions are
 available through shortcuts and settings; previews remain non-interactive in
 accordance with the chosen interaction design.
 
-Google Docs support is deferred; any future companion must be optional.
+Google Docs support is now in development at the user’s request. Its Chrome
+companion is optional and off by default; native end-to-end verification is pending.
 Cross-Mac synchronization is outside the project scope.
 
 Local development evidence is retained outside the public source manifest.

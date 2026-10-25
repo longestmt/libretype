@@ -5,6 +5,7 @@ mod background;
 mod code_editor;
 mod config;
 mod core;
+use libretypist::docs_bridge;
 mod emoji;
 pub mod history;
 mod local_http;
