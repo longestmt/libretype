@@ -27,3 +27,6 @@ core-foundation = "0.10"
 [profile.release]
 lto = "thin"
 strip = true
+
+[patch.crates-io]
+objc = { path = "vendor/objc" }

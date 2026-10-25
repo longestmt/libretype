@@ -42,3 +42,11 @@
 **/.env*
 **/*.pem
 **/*.key
+
+# Reviewed Objective-C compatibility source and its retained notices.
+!/vendor/objc/Cargo.toml
+!/vendor/objc/src/**/*.rs
+!/vendor/objc/LICENSE.txt
+!/vendor/objc/COPYING-GPL-3.0
+!/vendor/objc/README.md
+!/vendor/objc/SOURCE.md

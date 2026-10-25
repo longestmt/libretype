@@ -1,7 +1,7 @@
 {
   "target": "aarch64-apple-darwin",
   "rustc": "rustc 1.99.1 (58cf8f9c3 2026-10-13) (Homebrew)\nbinary: rustc\ncommit-hash: 58cf8f9c35b355199727627d07ae34a4e2846d67\ncommit-date: 2026-10-13\nhost: aarch64-apple-darwin\nrelease: 1.99.1\nLLVM version: 23.1.3",
-  "cargo_lock_sha256": "0a21bad057b884d3e4f3da51884d7d7317ac90a5e01c4334b64dba6eb2a98f61",
+  "cargo_lock_sha256": "797a6cdede12e530a51ca6b68db6791b5e8d64aa2a424c3b4194605fad6a5fd5",
   "packages": [
     {
       "name": "base64",
@@ -729,17 +729,26 @@
       ]
     },
     {
-      "name": "malloc_buf",
-      "version": "0.0.6",
-      "license": "MIT",
+      "name": "malloced",
+      "version": "1.3.1",
+      "license": "MIT OR Apache-2.0",
       "authors": [
-        "Steven Sheldon"
+        "Nikolai Vazquez <hello@nikolaivazquez.com>"
       ],
-      "repository": "https://github.com/SSheldon/malloc_buf",
+      "repository": "https://github.com/nvzqz/malloced",
       "roles": [
         "runtime"
       ],
-      "notices": []
+      "notices": [
+        {
+          "path": "crates/malloced-1.3.1/LICENSE-APACHE",
+          "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30"
+        },
+        {
+          "path": "crates/malloced-1.3.1/LICENSE-MIT",
+          "sha256": "daacc37f680c7dd0a758ac99a109f2f57d9f21d3683df9e9245055922842a695"
+        }
+      ]
     },
     {
       "name": "memchr",
@@ -767,7 +776,7 @@
     {
       "name": "objc",
       "version": "0.2.7",
-      "license": "MIT",
+      "license": "MIT AND GPL-3.0-only",
       "authors": [
         "Steven Sheldon"
       ],
@@ -776,6 +785,10 @@
         "runtime"
       ],
       "notices": [
+        {
+          "path": "crates/objc-0.2.7/COPYING-GPL-3.0",
+          "sha256": "3972dc9744f6499f0f9b2dbf76696f2ae7ad8af9b23dde66d6af86c9dfb36986"
+        },
         {
           "path": "crates/objc-0.2.7/LICENSE.txt",
           "sha256": "e353f37b12aefbb9f9b29490e837cfee05d9bda70804b3562839a3285c1df1e5"
@@ -1647,8 +1660,7 @@
     }
   ],
   "issues": [
-    "block 0.1.6: exact-version copyright/license text needs upstream clarification",
-    "malloc_buf 0.0.6: exact-version copyright/license text needs upstream clarification"
+    "block 0.1.6: exact-version copyright/license text needs upstream clarification"
   ],
   "rust_notices": [
     {

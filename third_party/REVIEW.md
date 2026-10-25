@@ -1,6 +1,6 @@
 # Third-party notice review
 
-Reviewed 2026-10-23 against the retained Cargo.lock and aarch64-apple-darwin
+Reviewed 2026-10-24 against the retained Cargo.lock and aarch64-apple-darwin
 resolution. The 76-package inventory includes build tools and procedural macros;
 see each package's `roles` in notices/inventory.json. All available nested legal
 files are retained, including ring's BoringSSL, ISC, once_cell and fiat notices.
@@ -14,16 +14,24 @@ redistributed by this source tree.
   author. The upstream `SSheldon/rust-block` repository, including tag `0.1.6`,
   has no standalone copyright/license file. Obtain an authoritative notice or
   replace this dependency with an appropriately licensed implementation.
-- **malloc_buf 0.0.6:** the exact crate also declares MIT and Steven Sheldon.
-  Tag `0.0.6` lacks a license file. Upstream added a LICENSE in commit
-  `d9a3e53` after version 1.0.0; it is not silently substituted for the older
-  version. Obtain clarification of its applicability or replace the dependency.
 - Confirm rights/contributor authority for application-owned contributions.
   The retained copyright attribution does not assert exclusive human authorship
   of every generated line. Preserve original development records privately.
 
 These are unresolved exact-notice/provenance questions, not findings that the
 packages are necessarily incompatible. Public binary release stays gated.
+
+## Replaced buffer dependency
+
+The `malloc_buf` 0.0.6 dependency has been removed from this candidate's lockfile
+and dependency graph. Its later upstream license is not applied retroactively.
+The patched `objc` source instead uses `malloced` 1.3.1 through a small adapter;
+the downloaded crate includes its complete MIT and Apache-2.0 notices. The original
+`objc` MIT notice and the new modifications' GPL-3.0 text are retained. See
+[source provenance](../vendor/objc/SOURCE.md) for the exact scope and validation.
+This closes that dependency's missing-notice issue in the candidate, not the
+separate block notice or contributor-authority gates. Installed-app validation
+is still required before adopting the candidate.
 
 ## Test provenance
 

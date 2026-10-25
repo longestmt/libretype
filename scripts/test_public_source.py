@@ -17,7 +17,7 @@ class PublicSourceTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             shutil.copyfile(public_source.ROOT / '.gitignore', root / '.gitignore')
-            allowed = ['src/main.rs', 'scripts/build-app.sh', 'docs/guide.md', 'Cargo.lock', 'vendor/gemoji/emoji.json', 'third_party/notices/example/LICENSE']
+            allowed = ['src/main.rs', 'scripts/build-app.sh', 'docs/guide.md', 'Cargo.lock', 'vendor/gemoji/emoji.json', 'third_party/notices/example/LICENSE', 'vendor/objc/Cargo.toml', 'vendor/objc/src/malloc_buf.rs', 'vendor/objc/LICENSE.txt', 'vendor/objc/COPYING-GPL-3.0', 'vendor/objc/SOURCE.md']
             excluded = ['research/raw.json', 'backups/src/old.rs', 'dist/App.app/binary', 'src/secret.key', 'src/.env.local', 'scripts/__pycache__/cached.pyc', 'unreviewed.txt', 'third_party/model.gguf', 'third_party/private.json', 'docs/capture.png', 'target/debug/app']
             for name in allowed + excluded:
                 p = root / name

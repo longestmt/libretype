@@ -29,7 +29,7 @@ def main():
     parser.add_argument('--list', action='store_true')
     args = parser.parse_args()
     files = public_files()
-    required = ['LICENSE', 'COPYRIGHT', 'Cargo.toml', 'Cargo.lock', 'README.md', 'src/main.rs', 'src/lib.rs', 'scripts/build-app.sh', 'packaging/Info.plist', 'vendor/gemoji/emoji.json']
+    required = ['LICENSE', 'COPYRIGHT', 'Cargo.toml', 'Cargo.lock', 'README.md', 'src/main.rs', 'src/lib.rs', 'scripts/build-app.sh', 'packaging/Info.plist', 'vendor/gemoji/emoji.json', 'vendor/objc/Cargo.toml', 'vendor/objc/src/lib.rs', 'vendor/objc/src/malloc_buf.rs', 'vendor/objc/LICENSE.txt', 'vendor/objc/COPYING-GPL-3.0', 'vendor/objc/SOURCE.md']
     for name in required:
         if Path(name) not in files:
             raise SystemExit('Missing public build input: ' + name)
