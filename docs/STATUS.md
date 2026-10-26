@@ -188,6 +188,11 @@ all original settings restored; clipboard context and history remained off.
    unsent Gmail check. The original model and settings were restored. There was
    no contemporaneous acceptance trace, so this is not machine-verified edit
    integrity or a broader editor-compatibility claim.
+   A subsequent recheck of the currently installed `gemma4:e4b` alias found a
+   different MLX artifact. Its shorter frozen checks passed, but longer-profile
+   spelling and sign-off failures remained. A targeted spelling-precedence
+   reminder changed none of nineteen outputs and was reverted. Model identity
+   and evaluation limits are recorded in [model quality](MODEL_QUALITY.md).
 2. **Editor coverage.** Extend code-editor policy checks beyond the verified
    VSCodium source editor and Twinny composer to other chat/source surfaces,
    and verify terminal AI prompt/multiplexer layouts. The reported spreadsheet

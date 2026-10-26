@@ -364,3 +364,36 @@ Exact artifacts used:
 
 Ollama documents its [MLX backend](https://ollama.com/blog/mlx-performance); that
 backend support does not by itself establish completion quality or speed.
+
+### Current alias recheck and spelling-precedence candidate
+
+Later on 2026-10-26, the already-installed `gemma4:e4b` alias resolved to an
+MLX/Safetensors artifact with digest
+`eb2177adf7646d15faead94fdad6d3e170dc8015653418a3b7d5d52a6380be5b`, using Ollama
+0.40.11. Its metadata did not report a parameter count or quantization level;
+the alias alone is not evidence that it is the earlier GGUF artifact. The probe
+did not change the alias, weights or application configuration.
+
+The unchanged production pipeline passed the seven frozen spelling, recipient,
+sign-off and compatible-name checks. With the longer profile, it still completed
+ordinary words using British spelling despite an American-spelling instruction,
+selected a different learned entry for the toolkit name, and substituted a
+generic sign-off. The learned identifier was retained with quotation marks, and
+the proper venue/laboratory names, person and explicit venue override were
+preserved. Plurality and optional quotation marks were not scored as instruction
+failures.
+
+A candidate added a specific final reminder to use an explicit spelling
+convention for ordinary words while preserving names, code identifiers and
+sign-offs requested verbatim. It removed no profile entries and added no model
+request. All nineteen candidate outputs were identical to the corresponding
+baseline outputs, so the candidate was rejected and reverted. The predeclared
+gate required a corrected failure without preservation regressions before wider
+holdout testing; no further holdouts were run after this gate failed.
+
+There were 38 completed calls with no returned transport errors, and model
+identity stayed unchanged across the checks. The candidate's compiled binaries
+were checked for the changed prompt text. This is an unblinded, single-call
+development comparison, not an accuracy estimate. The frozen-profile probes
+isolate completion behavior; they do not establish extraction quality or resolve
+the outstanding personalization limitations.
