@@ -82,7 +82,7 @@ impl std::fmt::Display for Error {
         Self::Response=>"Ollama returned an incomplete or invalid download response. Retry to resume.",
         Self::Download=>"Ollama could not download this model. Check internet access and free disk space, then retry.",
         Self::Stalled=>"The model download stopped making progress. Check internet access and free disk space, then retry to resume.",
-        Self::NotLocal=>"The downloaded model could not be verified as a local GGUF model.",
+        Self::NotLocal=>"The downloaded model could not be verified as a supported local GGUF or MLX model.",
         Self::Busy=>"A download is already running or stopping.",
         Self::UnknownModel=>"Choose one of the available local models.",
     })
@@ -318,14 +318,7 @@ fn verify_at(client: &ureq::Agent, base: &str, tag: &str) -> Result<(), Error> {
         return Err(Error::Response);
     }
     let metadata: Value = serde_json::from_slice(&bytes).map_err(|_| Error::Response)?;
-    if metadata.pointer("/details/format").and_then(Value::as_str) != Some("gguf")
-        || ["remote_host", "remote_model"].iter().any(|key| {
-            metadata
-                .get(key)
-                .and_then(Value::as_str)
-                .is_some_and(|s| !s.is_empty())
-        })
-    {
+    if !crate::model::is_local_model(&metadata) {
         return Err(Error::NotLocal);
     }
     Ok(())
@@ -985,6 +978,18 @@ mod tests {
     fn success_requires_local_metadata_and_sends_only_download_fields() {
         for (metadata, result) in [
             (json!({"details":{"format":"gguf"}}), Ok(())),
+            (
+                json!({"details":{"format":"safetensors","runner":"mlx"},"capabilities":["completion"]}),
+                Ok(()),
+            ),
+            (
+                json!({"details":{"format":"safetensors","runner":"mlx"},"capabilities":["completion"],"remote_model":"remote"}),
+                Err(Error::NotLocal),
+            ),
+            (
+                json!({"details":{"format":"gguf"},"remote_host":false}),
+                Err(Error::NotLocal),
+            ),
             (
                 json!({"details":{"format":"gguf"},"remote_host":"example.invalid"}),
                 Err(Error::NotLocal),

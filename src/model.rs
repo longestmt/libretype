@@ -119,14 +119,30 @@ fn local_metadata(
         .map_err(|_| ModelError::InvalidResponse("Ollama returned invalid model metadata".into()))
 }
 
-fn is_local_model(metadata: &Value) -> bool {
-    let remote = ["remote_host", "remote_model"].iter().any(|key| {
-        metadata
-            .get(key)
-            .and_then(Value::as_str)
-            .is_some_and(|s| !s.is_empty())
-    });
-    !remote && metadata.pointer("/details/format").and_then(Value::as_str) == Some("gguf")
+/// Recognize only supported downloaded model formats. Both discovery and the
+/// pre-request check use this rule; malformed remote metadata fails closed.
+pub(crate) fn is_local_model(metadata: &Value) -> bool {
+    let remote = ["remote_host", "remote_model"]
+        .iter()
+        .any(|key| match metadata.get(key) {
+            None | Some(Value::Null) => false,
+            Some(Value::String(value)) => !value.is_empty(),
+            Some(_) => true,
+        });
+    if remote {
+        return false;
+    }
+    match metadata.pointer("/details/format").and_then(Value::as_str) {
+        Some("gguf") => true,
+        Some("safetensors") => {
+            metadata.pointer("/details/runner").and_then(Value::as_str) == Some("mlx")
+                && metadata
+                    .get("capabilities")
+                    .and_then(Value::as_array)
+                    .is_some_and(|caps| caps.iter().any(|cap| cap.as_str() == Some("completion")))
+        }
+        _ => false,
+    }
 }
 
 pub fn generate(
@@ -207,22 +223,42 @@ fn generate_at(
     let metadata = local_metadata(base, &config.model, request.id, current)?;
     if !is_local_model(&metadata) {
         return Err(ModelError::InvalidConfig(
-            "Only downloaded local GGUF models are supported; cloud inference is disabled".into(),
+            "Select a downloaded local GGUF or MLX model; cloud inference is disabled".into(),
         ));
     }
     ensure_current(request.id, current)?;
+    let allow_raw =
+        metadata.pointer("/details/format").and_then(Value::as_str) != Some("safetensors");
+    // MLX instruction models must also receive an explicit completion task when
+    // no writing preferences are configured. Keep the GGUF fast path unchanged.
+    let prepared =
+        if !allow_raw && background.is_none() && !personalized && instructions.trim().is_empty() {
+            core::prepare_structured(
+                &request.prefix,
+                &request.suffix,
+                config.context_chars,
+                &instructions,
+            )
+        } else {
+            prepared
+        };
+    let fallback = if allow_raw { fallback } else { None };
     let thinking = metadata
         .get("capabilities")
         .and_then(Value::as_array)
         .is_some_and(|caps| caps.iter().any(|cap| cap.as_str() == Some("thinking")));
     if let Some(prepared) = prepared {
-        let output = generate_prepared(config, request, current, base, &prepared, thinking)?;
+        let output = generate_prepared(
+            config, request, current, base, &prepared, thinking, allow_raw,
+        )?;
         if !output.is_empty() {
             return Ok(output);
         }
     }
     match fallback {
-        Some(prepared) => generate_prepared(config, request, current, base, &prepared, thinking),
+        Some(prepared) => generate_prepared(
+            config, request, current, base, &prepared, thinking, allow_raw,
+        ),
         None => Ok(String::new()),
     }
 }
@@ -234,6 +270,7 @@ fn generate_prepared(
     base: &str,
     prepared: &core::PreparedCompletion,
     thinking: bool,
+    allow_raw: bool,
 ) -> Result<String, ModelError> {
     ensure_current(request.id, current)?;
     let (instructions, personalized) = preferences(
@@ -259,8 +296,8 @@ fn generate_prepared(
         "model": config.model,
         "prompt": prompt,
         // Writing preferences need the model's instruction template even at a
-        // word boundary. Keep raw continuation only for unconfigured writing.
-        "raw": !matches!(prepared.format, CompletionFormat::ReconstructedWord | CompletionFormat::CompletedPassage)
+        // word boundary. Keep raw continuation only for unconfigured GGUF writing.
+        "raw": allow_raw && !matches!(prepared.format, CompletionFormat::ReconstructedWord | CompletionFormat::CompletedPassage)
             && request.background.prompt(config, &request.app_id, request.website.as_deref()).is_none()
             && instructions.trim().is_empty()
             && !personalized,
@@ -410,7 +447,7 @@ pub fn generate_choices(
     let metadata = local_metadata(BASE, &config.model, request.id, current)?;
     if !is_local_model(&metadata) {
         return Err(ModelError::InvalidConfig(
-            "Only downloaded local GGUF models are supported; cloud inference is disabled".into(),
+            "Select a downloaded local GGUF or MLX model; cloud inference is disabled".into(),
         ));
     }
     ensure_current(request.id, current)?;
@@ -488,7 +525,7 @@ pub fn generate_profile(
     let metadata = local_metadata(BASE, &config.model, request.id, current)?;
     if !is_local_model(&metadata) {
         return Err(ModelError::InvalidConfig(
-            "Only downloaded local GGUF models are supported; cloud inference is disabled".into(),
+            "Select a downloaded local GGUF or MLX model; cloud inference is disabled".into(),
         ));
     }
     ensure_current(request.id, current)?;
@@ -670,7 +707,14 @@ mod tests {
         }
         let mut body = vec![0; size];
         reader.read_exact(&mut body).unwrap();
-        (first, serde_json::from_slice(&body).unwrap())
+        (
+            first,
+            if body.is_empty() {
+                Value::Null
+            } else {
+                serde_json::from_slice(&body).unwrap()
+            },
+        )
     }
     fn wire_reply(socket: &mut TcpStream, body: &str) {
         write!(
@@ -694,7 +738,9 @@ mod tests {
     }
     #[test]
     fn explicit_preferences_use_templated_insertion_and_resolved_scope() {
-        for (scope, learned) in (0..5).flat_map(|scope| [false, true].map(|learned| (scope, learned))) {
+        for (scope, learned) in
+            (0..5).flat_map(|scope| [false, true].map(|learned| (scope, learned)))
+        {
             let listener = TcpListener::bind("127.0.0.1:0").unwrap();
             let base = format!("http://{}", listener.local_addr().unwrap());
             let mut config = Config::default();
@@ -720,7 +766,8 @@ mod tests {
             if learned {
                 config.history.strength = crate::history::Strength::Strong;
                 request.profile = Some(crate::history::Profile {
-                    revision: 1, created_at: 1,
+                    revision: 1,
+                    created_at: 1,
                     source_policy: crate::history::profile::source_policy(&config),
                     guidance: "Concise writing.".into(),
                     vocabulary: vec!["Ariadne".into()],
@@ -745,7 +792,10 @@ mod tests {
                     assert_eq!(prompt.contains("Mention patience."), scope >= 3);
                     assert_eq!(prompt.contains("Ariadne"), learned);
                     assert_eq!(prompt.contains("fewest words"), scope > 0);
-                    assert_eq!(prompt.contains("satisfy the explicit writing preferences"), learned && scope > 0);
+                    assert_eq!(
+                        prompt.contains("satisfy the explicit writing preferences"),
+                        learned && scope > 0
+                    );
                     let response = if scope == 0 && !learned {
                         assert!(body.get("format").is_none());
                         assert_eq!(prompt, "Thank you for your");
@@ -830,36 +880,80 @@ mod tests {
     }
     #[test]
     fn nonlocal_model_metadata_prevents_any_writing_request() {
+        for metadata in [
+            json!({"details":{"format":"gguf"},"remote_host":"example.invalid"}),
+            json!({"details":{"format":"safetensors","runner":"mlx"},"capabilities":["completion"],"remote_model":"remote"}),
+            json!({"details":{"format":"safetensors","runner":"mlx"},"capabilities":["completion"],"remote_host":false}),
+            json!({"details":{"format":"safetensors"},"capabilities":["completion"]}),
+        ] {
+            let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+            let base = format!("http://{}", listener.local_addr().unwrap());
+            std::thread::scope(|scope| {
+                let server = scope.spawn(|| {
+                    let (mut socket, _) = listener.accept().unwrap();
+                    let (path, body) = wire_request(&mut socket);
+                    assert!(path.starts_with("POST /api/show "));
+                    assert_eq!(body.as_object().unwrap().len(), 1);
+                    wire_reply(&mut socket, &metadata.to_string());
+                });
+                assert!(matches!(
+                    generate_at(
+                        &base,
+                        &Config::default(),
+                        &synthetic_request(1),
+                        &AtomicU64::new(1)
+                    ),
+                    Err(ModelError::InvalidConfig(_))
+                ));
+                server.join().unwrap();
+            });
+            listener.set_nonblocking(true).unwrap();
+            assert_eq!(
+                listener.accept().unwrap_err().kind(),
+                std::io::ErrorKind::WouldBlock
+            );
+        }
+    }
+    #[test]
+    fn mlx_plain_completion_uses_one_templated_structured_request() {
         let listener = TcpListener::bind("127.0.0.1:0").unwrap();
         let base = format!("http://{}", listener.local_addr().unwrap());
-        std::thread::scope(|scope| {
-            let server = scope.spawn(|| {
-                let (mut socket, _) = listener.accept().unwrap();
-                let (path, body) = wire_request(&mut socket);
-                assert!(path.starts_with("POST /api/show "));
-                assert_eq!(body.as_object().unwrap().len(), 1);
-                wire_reply(
-                    &mut socket,
-                    r#"{"details":{"format":"gguf"},"remote_host":"example.invalid"}"#,
-                );
-            });
-            assert!(matches!(
-                generate_at(
-                    &base,
-                    &Config::default(),
-                    &synthetic_request(1),
-                    &AtomicU64::new(1)
+        let server = std::thread::spawn(move || {
+            let (mut socket, _) = listener.accept().unwrap();
+            let (path, _) = wire_request(&mut socket);
+            assert!(path.starts_with("POST /api/show "));
+            wire_reply(&mut socket, &json!({"details":{"format":"safetensors","runner":"mlx"},"capabilities":["completion","thinking"]}).to_string());
+            let (mut socket, _) = listener.accept().unwrap();
+            let (path, body) = wire_request(&mut socket);
+            assert!(path.starts_with("POST /api/generate "));
+            assert_eq!(body["raw"], false);
+            assert_eq!(body["think"], false);
+            assert_eq!(body["format"]["required"], json!(["insert"]));
+            assert!(body["prompt"]
+                .as_str()
+                .unwrap()
+                .contains("Thank you for your "));
+            wire_reply(
+                &mut socket,
+                &format!(
+                    "{}\n",
+                    json!({"response":"{\"insert\":\"help.\"}","done":true})
                 ),
-                Err(ModelError::InvalidConfig(_))
-            ));
-            server.join().unwrap();
+            );
         });
-        listener.set_nonblocking(true).unwrap();
         assert_eq!(
-            listener.accept().unwrap_err().kind(),
-            std::io::ErrorKind::WouldBlock
+            generate_at(
+                &base,
+                &Config::default(),
+                &synthetic_request(1),
+                &AtomicU64::new(1)
+            )
+            .unwrap(),
+            "help."
         );
+        server.join().unwrap();
     }
+
     #[test]
     fn profile_stream_requires_a_complete_bounded_current_result() {
         let epoch = AtomicU64::new(1);
@@ -1203,15 +1297,63 @@ mod tests {
     }
 
     #[test]
-    fn rejects_cloud_aliases_and_unknown_formats() {
-        assert!(is_local_model(&json!({"details":{"format":"gguf"}})));
-        assert!(!is_local_model(
-            &json!({"details":{"format":"gguf"}, "remote_model":"qwen3"})
-        ));
-        assert!(!is_local_model(
-            &json!({"details":{"format":"gguf"}, "remote_host":"https://ollama.com"})
-        ));
-        assert!(!is_local_model(&json!({"details":{}})));
+    fn supported_local_formats_reject_remote_or_ambiguous_metadata() {
+        let gguf = json!({"details":{"format":"gguf"}});
+        let mlx = json!({"details":{"format":"safetensors","runner":"mlx"},"capabilities":["completion","thinking"]});
+        for local in [gguf, mlx.clone()] {
+            assert!(is_local_model(&local));
+            for key in ["remote_host", "remote_model"] {
+                for value in [Value::Null, json!("")] {
+                    let mut metadata = local.clone();
+                    metadata[key] = value;
+                    assert!(is_local_model(&metadata));
+                }
+                for value in [
+                    json!("remote"),
+                    json!(false),
+                    json!(0),
+                    json!([]),
+                    json!({}),
+                ] {
+                    let mut metadata = local.clone();
+                    metadata[key] = value;
+                    assert!(!is_local_model(&metadata));
+                }
+            }
+        }
+        for metadata in [
+            json!({}),
+            json!({"details":{"format":"unknown"}}),
+            json!({"details":{"format":"safetensors"},"capabilities":["completion"]}),
+            json!({"details":{"format":"safetensors","runner":"other"},"capabilities":["completion"]}),
+            json!({"details":{"format":"safetensors","runner":"mlx"},"capabilities":["embedding"]}),
+            json!({"details":{"format":"safetensors","runner":"mlx"}}),
+        ] {
+            assert!(!is_local_model(&metadata));
+        }
+    }
+
+    #[test]
+    fn discovery_lists_only_supported_local_gguf_and_mlx_models() {
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+        let base = format!("http://{}", listener.local_addr().unwrap());
+        let server = std::thread::spawn(move || {
+            let (mut socket, _) = listener.accept().unwrap();
+            let (path, _) = wire_request(&mut socket);
+            assert!(path.starts_with("GET /api/tags "));
+            wire_reply(&mut socket, &json!({"models":[
+                {"name":"local-gguf","details":{"format":"gguf"}},
+                {"name":"local-mlx","details":{"format":"safetensors","runner":"mlx"},"capabilities":["completion"]},
+                {"name":"remote-mlx","details":{"format":"safetensors","runner":"mlx"},"capabilities":["completion"],"remote_host":"example.invalid"},
+                {"name":"incomplete-mlx","details":{"format":"safetensors"}},
+                {"name":"malformed-remote","details":{"format":"gguf"},"remote_model":true}
+            ]}).to_string());
+        });
+        assert_eq!(
+            list_models_at(&base, Duration::from_secs(1)).unwrap(),
+            vec!["local-gguf", "local-mlx"]
+        );
+        server.join().unwrap();
     }
 
     #[test]

@@ -287,3 +287,53 @@ remain in the evidence. The remaining expanded cases and eight prewritten new
 holdouts were not run. These are unblinded development comparisons, not an
 accuracy estimate. No history, settings or installed application changed.
 Explicit-preference priority and learned-sign-off quality remain unresolved.
+
+
+### Additional local models and MLX compatibility
+
+On 2026-10-26, the already-downloaded Qwen3.5 2B Q4_K_M model completed the
+seven frozen-profile checks and twelve longer-profile cases through the unchanged
+production pipeline. It returned `cheque` despite the American instruction with
+influence both on and off, used the learned sign-off instead of the requested
+one, and supplied a technical term where the compatible recipient was expected.
+Six calls returned no usable insertion. All nineteen calls completed without a
+transport error; the median interval was 1.11 seconds and the first was 5.51
+seconds. This did not justify changing the selected model.
+
+An isolated compatibility candidate then allowed the already-downloaded Gemma4
+12B NVFP4 model through Ollama’s local MLX runner. The seven frozen checks retained
+the expected spelling, recipients and sign-off. In the twelve longer-profile
+cases it honored American spelling for neighbour, travelling and organise and
+used the recurring sign-off verbatim, but returned no usable insertion for the
+favourite case and invented `x` rather than the learned identifier. This is a
+limited quality improvement, not a solution to all personalization failures.
+
+Basic backend checks exposed empty plain-boundary results on the raw continuation
+path. The MLX candidate now uses a templated, structured completion request for
+unconfigured writing as well. The six-case rerun produced valid plain English,
+Spanish, partial-word and mid-line insertions and respected app/site instructions.
+A further live check returned five contextual synonyms and a valid profile from
+three invented samples. The profile retained the specialist term and recurring
+sign-off but omitted the recurring person's name; valid analysis is not evidence
+of complete extraction. These were 31 MLX completion calls plus one synonyms
+call and one profile call, with no returned transport errors.
+GGUF routing remains unchanged. The same metadata rule is used for discovery,
+download verification and the pre-generation check: MLX requires Safetensors, an
+explicit MLX runner and completion capability, with no remote reference. Unknown
+formats and malformed remote fields are rejected before writing is sent.
+
+These checks used Ollama 0.40.8 on the existing 16 GB M1. MLX completion intervals
+varied substantially, including several over ten seconds; concurrent desktop
+work and caches were not controlled. Ollama reported 8,956,851,444 bytes of loaded
+allocation at a 2,048-token context, which is not a total-memory or peak-memory
+measurement. No default or user model selection changed, no new weights were
+downloaded, and no personal writing or history was used. Native editor use with
+MLX remains unverified.
+
+Exact artifacts used:
+
+- `qwen3.5:2b-q4_K_M`: `1e2d21a4f03ab9e4a9c1976a4b7e88f21de61d65f2c5485d8fde8942be73f1e7`
+- `gemma4:12b`: `c7597fc90b86aff6965317f37dd5465402284e26382d9b4bf2dfe3ef1491f4b6`
+
+Ollama documents its [MLX backend](https://ollama.com/blog/mlx-performance); that
+backend support does not by itself establish completion quality or speed.
