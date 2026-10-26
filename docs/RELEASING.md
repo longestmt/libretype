@@ -187,9 +187,10 @@ The exported source produced a bundle with a valid strict ad-hoc signature,
 from those of the prepared bundle; this establishes offline buildability, not
 bit-for-bit reproducibility. No valid certificate signing identity is currently
 available. The update check reports a changed ad-hoc identity, so installing this
-build will require checking Accessibility approval again. Installation, native
-interruption testing and the companion's live initially-disabled setup check
-remain pending. Nothing was published.
+build will require checking Accessibility approval again. Installation and native
+interruption testing remain pending. The standalone companion subsequently passed
+the live initially-disabled setup and page-reload checks described in
+[Docs support](GOOGLE_DOCS.md). Nothing was published.
 
 ## References
 

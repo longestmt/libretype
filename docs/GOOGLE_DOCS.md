@@ -59,9 +59,8 @@ verified enabling missing options, leaving already-enabled options alone, and
 stopping without saving after interruption or unrelated preference changes.
 A live 0.1.6 check completed the save flow: the user supplied a screenshot showing
 **Last setup: Settings saved** and confirmed that suggestions worked afterward.
-The tested document already supported suggestions before this check. This result
-does not independently verify enabling initially-disabled options or persistence
-after a browser restart; those transitions remain covered by synthetic tests only.
+The tested document already supported suggestions before this check, so that
+result alone did not establish initial enablement.
 
 An initially-disabled check later stopped at the Tools menu without opening the
 Accessibility dialog, including an uninterrupted retry. The original settings
@@ -69,8 +68,19 @@ were restored and verified. Version 0.1.7 sends pointer events at each control's
 actual position instead of the default `(0, 0)`, and refuses off-screen controls.
 A pointer-sensitive menu regression fails before this change and passes after;
 a real Chrome fixture also verifies native checkbox activation and preservation
-of unrelated options. The cause of the live failure and the fix's effectiveness
-in Docs still require verification after reloading the extension.
+of unrelated options. After the user reloaded 0.1.7, a live check started with
+screen reader and braille support both disabled. The helper reported **Settings
+saved**, and reopening Accessibility settings confirmed both were enabled.
+Collaborator announcements and magnification remained off, matching the test's
+starting state. Both required options remained enabled after reloading the page.
+The original collaborator-announcement preference was then restored to On;
+magnification remains Off, and both required options remain On.
+
+An additional already-enabled attempt returned **Setup stopped**. Its final
+checkbox states were unchanged; a later native observation showed Chrome on a
+different page, but the exact interruption stage was not recorded. This attempt
+is not counted as successful live idempotence verification. Browser-restart
+persistence and other document layouts remain unverified.
 
 The app-bundled companion in build 62 remains 0.1.3. The standalone 0.1.7
 extension can be loaded independently without replacing or re-signing the app.

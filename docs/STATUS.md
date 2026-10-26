@@ -246,9 +246,12 @@ word/full acceptance, 150% document zoom, and long-document scrolling and
 insertion. Companion 0.1.6 also completed its live accessibility-helper save flow,
 with continued suggestions confirmed by the user. The tested document already
 supported suggestions. A later initially-disabled check stopped at the Tools
-menu. A pointer-position correction in companion 0.1.7 passes unit and browser
-fixture checks but needs a live retest. Initial enablement and browser-restart
-persistence remain unverified. Selected-text alternatives, emoji/spelling replacements, tables,
+menu. After the pointer-position correction in companion 0.1.7, a live check
+enabled screen reader and braille support from Off and verified both after a
+page reload. The other test-state checkbox values were preserved; the original
+collaborator-announcement preference was restored afterward. An already-enabled
+follow-up returned a review result and is not counted as a pass. Browser-restart
+persistence remains unverified. Selected-text alternatives, emoji/spelling replacements, tables,
 browser zoom and complex layouts are not covered by this support claim.
 Cross-Mac synchronization is outside the project scope.
 
