@@ -65,3 +65,38 @@ outputs and timings, process samples and limitations. It reads no writing,
 history, clipboard, screen content or app settings. Generated reports belong
 outside the published source tree. The probe has a 120-second workload budget;
 on failure it terminates only its own child process, not the app or Ollama.
+
+## Native typing-to-draw instrumentation
+
+Development builds with `last_typing_latency` in the health snapshot retain one
+numeric sample for an ordinary keyboard event followed by a matched native
+capture, a successful model completion and a visible ghost-view draw. No key
+values, writing, wall-clock timestamps or foreground-app identities are stored
+in this sample. In-flight marks are discarded on missing capture, changed
+context, cancellation or a different foreground process. Manual activation,
+preview, emoji/spelling replacement and retained-word redraws are not trials.
+
+The phases are event receipt → first valid capture → request preparation starts
+→ model worker starts → worker finishes → main-thread reply receipt → first
+visible AppKit draw. They sum to `event_to_draw_ms`. The capture interval includes
+polling; the next includes debounce; request-to-worker includes optional context
+collection and queueing. The worker interval includes model metadata checks and
+fallbacks. This does not measure hardware-to-photon latency: OS delivery before
+the event tap and final compositor/display scanout are outside the measurement.
+
+Use a disposable editor, type a known phrase yourself, then leave it focused
+until ghost text appears. Wait several seconds before starting another trial.
+Browser-simulated keys can bypass the system listener and are unsuitable for
+this measurement. Run the bounded sampler with the installed process ID:
+
+```sh
+python3 scripts/measure_typing.py --pid 12345 --samples 3 --seconds 120 \
+  --output /tmp/libretype-typing.json
+```
+
+The sampler ignores the pre-existing sample, validates numeric fields and phase
+sums, refuses another process or an existing output path, and exports only the
+new timing samples. Health snapshots refresh about once per second, so rapid
+samples may be missed. Missing/canceled/failed completions are not included; a
+small controlled sample is not a population latency or battery benchmark.
+Native verification of this instrumentation is pending.
