@@ -19,8 +19,11 @@ to generate and accept suggestions through its existing local pipeline.
    select the directory printed by the registration command. This development
    extension requests access only to `https://docs.google.com/document/*` and
    permission to communicate with its specific local native host.
-4. In Google Docs, choose Tools → Accessibility and enable screen reader and
-   braille support. Keep any accessibility options you already use.
+4. With companion 0.1.6, open its toolbar popup while a Google Doc is active and
+   click **Enable Docs accessibility**. The popup closes; leave the document
+   focused while setup runs, then reopen the popup to see **Last setup**.
+   Alternatively, choose Tools → Accessibility in Docs and enable screen reader
+   and braille support manually. Keep any accessibility options you already use.
 5. Focus an editable document and try a synthetic sentence first. Opening the
    extension popup reports whether the local companion is enabled.
 
@@ -29,44 +32,40 @@ Chrome extension also stops the connection. This does not change your Docs
 accessibility settings, which may also be used by other assistive software.
 
 
-## Setup helper under validation
+## Accessibility setup helper
 
-The candidate companion adds an **Enable Docs accessibility** button in its
-popup. Version 0.1.4 passed automated and disposable-browser checks, but its live
-check reported that no editable Doc was selected even while suggestions worked
-in that document. This is a failed helper check, not a setup success.
+Companion 0.1.6 provides an **Enable Docs accessibility** button in its popup.
+The button requires the local companion to be enabled and an active editable
+Google Doc. It opens Tools → Accessibility, enables screen reader and braille
+support only if needed, verifies that the other checkbox states have not changed,
+and saves. It does not run automatically, edit document content, send document
+text, or request additional extension permissions.
 
-Version 0.1.5 resolved the target tab in the popup's own window and distinguished
-scope failures. The live retest identified the document window as unfocused
-while the popup was open. Version 0.1.6 acknowledges the button action and closes
-the popup first. It waits up to three seconds for the same active document in
-the same window to regain focus before any page action. Tab changes, navigation,
-another Chrome window, or a timeout stop setup. Existing focus and opt-out checks
-remain active during the operation. Reopening the popup shows the last setup
-result, held only in worker memory and containing no document address or text.
-Its 27 extension tests and 18 packaging tests pass; a live retest is pending.
-The app-bundled companion remains 0.1.3, while the standalone candidate
-can be loaded independently without replacing or re-signing the app.
+Chrome can report the document window as unfocused while the action popup is
+open. The helper therefore closes the popup first and waits up to three seconds
+for the same active document in the same window to regain focus. Tab changes,
+navigation, another Chrome window, or a timeout stop setup. Existing focus and
+opt-out checks remain active during the operation. Reopening the popup shows the
+last setup result, held only in worker memory with no document address or text.
 
-The button requires the local companion to be enabled and the current Chrome
-window to contain an active Google Doc. It opens Tools → Accessibility, enables
-screen reader and braille support only if needed, verifies the other checkbox
-states have not changed, and saves. It does not run automatically, edit document
-content, send document text, or request additional extension permissions.
-
-The candidate recognizes English menu and checkbox labels. Unrecognized controls,
+The helper recognizes English menu and checkbox labels. Unrecognized controls,
 a pre-existing dialog, a focus/navigation change, or an unrelated option change
 stop the operation. If it stops after opening the dialog, review or cancel that
 dialog before retrying; partially changed controls are not automatically saved.
 The popup retains manual instructions for unsupported layouts or languages.
 
-Tests exercise message-origin restrictions, active-tab checks, opt-out during
-setup, overlapping requests and preservation. A real-browser fixture verified enabling the
-two required options, leaving already-enabled options alone, and stopping without
-saving after a simulated focus change, unrelated-option change, or pre-existing
-dialog. These are synthetic tests of the implementation, not a live Google Docs
-compatibility claim. The selectors were inspected in the disposable document's
-current settings dialog; its existing preferences were left unchanged.
+The 27 extension tests and 18 packaging tests pass. Synthetic browser checks
+verified enabling missing options, leaving already-enabled options alone, and
+stopping without saving after interruption or unrelated preference changes.
+A live 0.1.6 check completed the save flow: the user supplied a screenshot showing
+**Last setup: Settings saved** and confirmed that suggestions worked afterward.
+The tested document already supported suggestions before this check. This result
+does not independently verify enabling initially-disabled options or persistence
+after a browser restart; those transitions remain covered by synthetic tests only.
+
+The app-bundled companion in build 62 remains 0.1.3. The tested standalone 0.1.6
+extension can be loaded independently without replacing or re-signing the app.
+Future bundles built from this source include 0.1.6.
 
 ## Data and boundaries
 
