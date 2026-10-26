@@ -19,7 +19,7 @@ to generate and accept suggestions through its existing local pipeline.
    select the directory printed by the registration command. This development
    extension requests access only to `https://docs.google.com/document/*` and
    permission to communicate with its specific local native host.
-4. With companion 0.1.6, open its toolbar popup while a Google Doc is active and
+4. With companion 0.1.6 or later, open its toolbar popup while a Google Doc is active and
    click **Enable Docs accessibility**. The popup closes; leave the document
    focused while setup runs, then reopen the popup to see **Last setup**.
    Alternatively, choose Tools → Accessibility in Docs and enable screen reader
@@ -34,7 +34,7 @@ accessibility settings, which may also be used by other assistive software.
 
 ## Accessibility setup helper
 
-Companion 0.1.6 provides an **Enable Docs accessibility** button in its popup.
+The companion provides an **Enable Docs accessibility** button in its popup.
 The button requires the local companion to be enabled and an active editable
 Google Doc. It opens Tools → Accessibility, enables screen reader and braille
 support only if needed, verifies that the other checkbox states have not changed,
@@ -54,7 +54,7 @@ stop the operation. If it stops after opening the dialog, review or cancel that
 dialog before retrying; partially changed controls are not automatically saved.
 The popup retains manual instructions for unsupported layouts or languages.
 
-The 27 extension tests and 18 packaging tests pass. Synthetic browser checks
+The 29 extension tests and the packaging checks pass. Synthetic browser checks
 verified enabling missing options, leaving already-enabled options alone, and
 stopping without saving after interruption or unrelated preference changes.
 A live 0.1.6 check completed the save flow: the user supplied a screenshot showing
@@ -63,9 +63,18 @@ The tested document already supported suggestions before this check. This result
 does not independently verify enabling initially-disabled options or persistence
 after a browser restart; those transitions remain covered by synthetic tests only.
 
-The app-bundled companion in build 62 remains 0.1.3. The tested standalone 0.1.6
+An initially-disabled check later stopped at the Tools menu without opening the
+Accessibility dialog, including an uninterrupted retry. The original settings
+were restored and verified. Version 0.1.7 sends pointer events at each control's
+actual position instead of the default `(0, 0)`, and refuses off-screen controls.
+A pointer-sensitive menu regression fails before this change and passes after;
+a real Chrome fixture also verifies native checkbox activation and preservation
+of unrelated options. The cause of the live failure and the fix's effectiveness
+in Docs still require verification after reloading the extension.
+
+The app-bundled companion in build 62 remains 0.1.3. The standalone 0.1.7
 extension can be loaded independently without replacing or re-signing the app.
-Future bundles built from this source include 0.1.6.
+Future bundles built from this source include 0.1.7.
 
 ## Data and boundaries
 

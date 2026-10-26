@@ -333,12 +333,20 @@ function setupHarness(initial={}) {
   const state={reader:false,braille:false,collaborators:true,magnifier:false,menu:false,dialog:false,
     allowed:true,visible:true,clicks:[],...initial};
   let listener;
-  const element=(name,shown,click)=>({
+  let elementNumber=0;
+  const element=(name,shown,click)=>{
+    const left=state.offscreen?1100:20+(elementNumber++%5)*120,top=50+elementNumber*30;
+    const activate=event=>{
+      if(state.requirePointer && (!event || event.clientX<left || event.clientX>=left+100
+        || event.clientY<top || event.clientY>=top+20)) return;
+      state.clicks.push(name);click?.();
+    };
+    return {
     name,isConnected:true,disabled:false,textContent:name,
-    getBoundingClientRect:()=>({width:shown()?100:0,height:shown()?20:0}),
+    getBoundingClientRect:()=>({left,top,width:shown()?100:0,height:shown()?20:0}),
     getAttribute:attribute=>attribute==='aria-disabled'?'false':null,
-    dispatchEvent(){},click(){state.clicks.push(name);click?.();},
-  });
+    dispatchEvent(event){if(event.type==='click')activate(event);},click(){activate();},
+  }};
   const tools=element('Tools',()=>true,()=>{state.menu=true});
   const item=element('Accessibility',()=>state.menu,()=>{state.menu=false;state.dialog=true});
   const label=element('Accessibility',()=>state.menu);label.closest=()=>item;
@@ -362,8 +370,8 @@ function setupHarness(initial={}) {
   const document={get visibilityState(){return state.visible?'visible':'hidden'},
     getElementById:id=>id==='docs-tools-menu'?tools:id==='heading'?heading:null,
     querySelectorAll:selector=>selector==='[role="dialog"]'?[dialog]:selector==='.goog-menuitem-label'?[label]:[]};
-  const context=vm.createContext({document,window:{},location:{href:url},Date,setTimeout,
-    MouseEvent:class{},getComputedStyle:()=>({visibility:'visible'}),
+  const context=vm.createContext({document,window:{innerWidth:1024,innerHeight:768},location:{href:url},Date,setTimeout,
+    MouseEvent:class{constructor(type,options){this.type=type;Object.assign(this,options);}},getComputedStyle:()=>({visibility:'visible'}),
     chrome:{runtime:{id:'test',onMessage:{addListener:fn=>{listener=fn}},
       sendMessage:async message=>{assert.equal(message.type,'setupGuard');return {allowed:state.allowed};}}}});
   vm.runInContext(fs.readFileSync(path.join(root,'setup.js'),'utf8'),context);
@@ -384,6 +392,18 @@ test('explicit setup enables only missing required options and saves once',async
     assert.equal(h.state.clicks.includes('Turn on screen reader support'),!initial.reader);
     assert.equal(h.state.clicks.includes('Turn on braille support'),!initial.braille);
   }
+});
+test('setup actions carry pointer coordinates inside each intended control',async()=>{
+  const h=setupHarness({requirePointer:true,collaborators:false});
+  assert.equal((await h.invoke()).result,'saved');
+  assert.equal(h.state.reader,true);assert.equal(h.state.braille,true);
+  assert.equal(h.state.collaborators,false);assert.equal(h.state.magnifier,false);
+  assert.equal(h.state.clicks.filter(x=>x==='OK').length,1);
+});
+test('setup does not activate a control outside the viewport',async()=>{
+  const h=setupHarness({offscreen:true});
+  assert.equal((await h.invoke()).result,'review');
+  assert.deepEqual(h.state.clicks,[]);assert.equal(h.state.saved,undefined);
 });
 test('setup refuses unrelated senders, extra payloads, pre-existing dialogs and missing controls',async()=>{
   for(const [message,sender] of [[{type:'setupAccessibility'},{id:'another'}],

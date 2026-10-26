@@ -42,9 +42,17 @@
       await guard();
       if (!visible(element) || element.disabled || element.getAttribute('aria-disabled') === 'true')
         throw new Error('Control unavailable');
-      element.dispatchEvent(new MouseEvent('mousedown', {bubbles:true,button:0,view:window}));
-      element.dispatchEvent(new MouseEvent('mouseup', {bubbles:true,button:0,view:window}));
-      element.click();
+      // Menu controls may compare pointer positions when distinguishing a menu
+      // opening click from a selection. Do not send every action at (0, 0).
+      const rect=element.getBoundingClientRect();
+      const clientX=rect.left+rect.width/2,clientY=rect.top+rect.height/2;
+      if (!Number.isFinite(clientX) || !Number.isFinite(clientY) || clientX<0 || clientY<0
+        || clientX>=window.innerWidth || clientY>=window.innerHeight)
+        throw new Error('Control outside viewport');
+      const options={bubbles:true,cancelable:true,composed:true,button:0,buttons:0,
+        clientX,clientY,view:window,detail:1};
+      for (const type of ['mouseover','mousemove','mousedown','mouseup','click'])
+        element.dispatchEvent(new MouseEvent(type,{...options,buttons:type==='mousedown'?1:0}));
     }
     await guard();
     // Do not save a dialog the user may already have edited.
