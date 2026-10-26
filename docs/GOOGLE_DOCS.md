@@ -87,16 +87,24 @@ a lost extension connection, a pre-existing dialog, unavailable/changed controls
 and timeouts opening the menu, opening the dialog, enabling options, or confirming
 Save no longer share a single generic outcome. Only fixed reason codes are kept
 in worker memory; no document text, addresses, or raw error strings are retained.
-All 34 extension tests pass, including worker-to-content interruption checks,
+The interruption tests cover worker-to-content interruption checks,
 stalled-step checks and rejection of arbitrary diagnostic details. These are
 synthetic checks; the reason for the earlier live interruption remains unknown.
 
-Installed build 64 bundles companion 0.1.7. Standalone companion 0.1.8 is staged
+Companion 0.1.9 fixes a separately reproduced interruption: reloading or closing
+an unrelated background tab no longer cancels setup or an in-flight caret check.
+The active document remains protected during asynchronous scope lookups, including
+overlapping requests. Navigation or closure of that document, tab activation,
+window-focus changes and opt-out still invalidate the operation. The regression
+failed before this change; all 39 extension tests pass afterward. This establishes
+the synthetic failure and fix, not the cause of the earlier live setup failure.
+
+Installed build 64 bundles companion 0.1.7. Standalone companion 0.1.9 is staged
 in the existing unpacked-extension directory; activation requires reloading that
 extension in Chrome and then reloading the document. A verified copy of the prior
 standalone package is retained locally. The native app, extension identity,
 permissions, host registration and license files are unchanged; no Accessibility
-reset is required. Live verification of 0.1.8 is pending.
+reset is required. Live verification of 0.1.9 is pending.
 
 ## Data and boundaries
 

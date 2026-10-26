@@ -526,3 +526,75 @@ test('popup explains known setup failures without rendering arbitrary details',a
     assert.equal(nodes.result.textContent.includes('private arbitrary text'),false);
   }
 });
+
+test('unrelated background tab navigation and closure do not interrupt active setup',async()=>{
+  for(const backgroundEvent of [
+    h=>h.chrome.tabs.onUpdated.listeners.forEach(fn=>fn(99,{status:'loading'})),
+    h=>h.chrome.tabs.onUpdated.listeners.forEach(fn=>fn(99,{url:'https://example.invalid/'})),
+    h=>h.chrome.tabs.onRemoved.listeners.forEach(fn=>fn(99)),
+  ]) {
+    const worker=harness();const page=setupHarness();
+    page.state.guard=message=>worker.context.route(message,sender());
+    page.state.afterClick=key=>{if(key==='reader')backgroundEvent(worker)};
+    worker.chrome.tabs.sendMessage=()=>page.invoke();
+    assert.equal((await requestSetup(worker)).result,'saved');
+    assert.equal(page.state.saved,true);assert.equal(page.state.braille,true);
+  }
+});
+test('navigation or closure of the setup document still stops before saving',async()=>{
+  for(const documentEvent of [
+    h=>h.chrome.tabs.onUpdated.listeners.forEach(fn=>fn(1,{status:'loading'})),
+    h=>h.chrome.tabs.onUpdated.listeners.forEach(fn=>fn(1,{url:url+'?changed'})),
+    h=>h.chrome.tabs.onRemoved.listeners.forEach(fn=>fn(1)),
+  ]) {
+    const worker=harness();const page=setupHarness();
+    page.state.guard=message=>worker.context.route(message,sender());
+    page.state.afterClick=key=>{if(key==='reader')documentEvent(worker)};
+    worker.chrome.tabs.sendMessage=()=>page.invoke();
+    const reply=await requestSetup(worker);
+    assert.equal(reply.result,'review');assert.equal(reply.reason,'focus_changed');
+    assert.equal(page.state.saved,undefined);assert.equal(page.state.braille,false);
+  }
+});
+test('navigation during first geometry scope lookup rejects only the queried document',async()=>{
+  for(const changedTab of [1,99]) {
+    const h=harness();let answer;
+    h.chrome.windows.get=()=>new Promise(resolve=>{answer=resolve});
+    const request=h.context.route(sample(),sender());
+    await new Promise(resolve=>setImmediate(resolve));
+    assert.equal(typeof answer,'function');
+    h.chrome.tabs.onUpdated.listeners.forEach(fn=>fn(changedTab,{status:'loading'}));
+    answer({focused:true});
+    assert.equal((await request).accepted,changedTab!==1);
+    assert.equal(h.messages.some(m=>m.type==='observe'),changedTab!==1);
+  }
+});
+test('finishing one overlapping lookup does not remove navigation protection from another',async()=>{
+  const h=harness();const answers=[];
+  h.chrome.windows.get=()=>new Promise(resolve=>answers.push(resolve));
+  const first=h.context.route(sample(),sender());
+  const second=h.context.route(sample(),sender());
+  await new Promise(resolve=>setImmediate(resolve));
+  assert.equal(answers.length,2);
+  answers[0]({focused:false});assert.equal((await first).accepted,false);
+  h.chrome.tabs.onRemoved.listeners.forEach(fn=>fn(1));
+  answers[1]({focused:true});assert.equal((await second).accepted,false);
+  assert.equal(h.messages.some(m=>m.type==='observe'),false);
+});
+test('a background tab with its own pending scope query cannot cancel setup in another tab',async()=>{
+  const worker=harness();const page=setupHarness();let releaseBackground;
+  worker.chrome.windows.get=()=>{
+    if(!releaseBackground)return new Promise(resolve=>{releaseBackground=resolve});
+    return Promise.resolve({focused:true});
+  };
+  const background=worker.context.route({type:'clear'},{...sender(),tab:{id:99}});
+  await new Promise(resolve=>setImmediate(resolve));
+  page.state.guard=message=>worker.context.route(message,sender());
+  page.state.afterClick=key=>{
+    if(key==='reader')worker.chrome.tabs.onUpdated.listeners.forEach(fn=>fn(99,{status:'loading'}));
+  };
+  worker.chrome.tabs.sendMessage=()=>page.invoke();
+  const reply=await requestSetup(worker);
+  releaseBackground({focused:false});await background;
+  assert.equal(reply.result,'saved');assert.equal(page.state.saved,true);
+});

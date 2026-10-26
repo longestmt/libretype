@@ -4,6 +4,9 @@ const HOST = 'org.libretype.docs';
 let port = null;
 let pending = null;
 let sourceTab = null;
+// Include requests still awaiting Chrome's tab/window lookup, before sourceTab
+// is assigned. Reference counts keep overlapping lookups protected.
+const routingTabs = new Map();
 let needsClear = false;
 let focusRevision = 0;
 let setupRun = null;
@@ -55,7 +58,7 @@ async function setupScopeIssue(tabId, revision) {
   try {
     const tab = await chrome.tabs.get(tabId);
     const window = await chrome.windows.get(tab.windowId);
-    if (revision !== focusRevision) return 'focus_changed';
+    if (revision !== focusRevision || setupRun?.cancelled) return 'focus_changed';
     if (setupRun?.tabId===tabId
       && (tab.windowId!==setupRun.windowId || tab.url!==setupRun.url)) return 'focus_changed';
     if (!tab.active) return 'inactive_tab';
@@ -124,6 +127,13 @@ async function route(message, sender) {
     && Object.keys(message).sort().join(',') === 'tabId,type'
     && Number.isInteger(message.tabId) && message.tabId >= 0) return setupFromPopup(message.tabId);
   if (!sender.tab || sender.frameId !== 0 || !docsURL(sender.url)) return unavailable();
+  const id = sender.tab.id;
+  const tracking = routingTabs.get(id) || {count:0,revision:0};
+  tracking.count++; routingTabs.set(id,tracking);
+  try { return await routeDocument(message,sender,tracking); }
+  finally { if (!--tracking.count) routingTabs.delete(id); }
+}
+async function routeDocument(message, sender, tracking) {
   if (message?.type === 'setupGuard') {
     const lease = setupRun;
     const denied = reason => ({allowed:false,reason});
@@ -133,23 +143,24 @@ async function route(message, sender) {
     if (!await setupScope(lease.tabId,lease.revision) || setupRun !== lease)
       return denied('focus_changed');
     const reply = await native({type:'ping'});
-    if (setupRun !== lease || lease.revision !== focusRevision) return denied('focus_changed');
+    if (setupRun !== lease || lease.cancelled || lease.revision !== focusRevision) return denied('focus_changed');
     if (Date.now() >= lease.expires) return denied('expired');
     if (!reply.enabled) return denied('off');
     return {allowed:true};
   }
   if (setupRun) return unavailable();
-  const revision = focusRevision;
+  const revision = focusRevision, navigationRevision = tracking.revision;
+  const scopeChanged = () => revision !== focusRevision || navigationRevision !== tracking.revision;
   const tab = await chrome.tabs.get(sender.tab.id);
   const window = await chrome.windows.get(tab.windowId);
-  if (revision !== focusRevision) return unavailable();
+  if (scopeChanged()) return unavailable();
   if (!tab.active || !window.focused || !docsURL(tab.url)) {
     if (sourceTab === tab.id) { sourceTab = null; await native({type:'clear'}); }
     return unavailable();
   }
   if (!['ping','observe','clear'].includes(message?.type)) return unavailable();
   if (sourceTab !== tab.id) { sourceTab = tab.id; await native({type:'clear'}); }
-  if (revision !== focusRevision || sourceTab !== tab.id) return unavailable();
+  if (scopeChanged() || sourceTab !== tab.id) return unavailable();
   if (message.type === 'observe') {
     const s=message.snapshot;
     if (!s || Object.keys(message).some(k=>!['type','snapshot'].includes(k))
@@ -175,10 +186,16 @@ chrome.windows.onFocusChanged.addListener(id=>{
   if(setupRun?.preparing && id>=0 && id!==setupRun.windowId)cancelPreparing();
   clear();
 });
+function documentChanged(id) {
+  // Reloading or closing an unrelated background tab does not change the
+  // document being checked. Focus/tab activation events still invalidate all.
+  if (id!==sourceTab && id!==setupRun?.tabId && !routingTabs.has(id)) return;
+  if (id===setupRun?.tabId) setupRun.cancelled=true;
+  const tracking = routingTabs.get(id);
+  if (tracking) tracking.revision++;
+  if (id===sourceTab) clear();
+}
 chrome.tabs.onUpdated.addListener((id,change)=>{
-  if (change.url || change.status==='loading') {
-    if(id===setupRun?.tabId)cancelPreparing();
-    if (id===sourceTab) clear(); else focusRevision++;
-  }
+  if (change.url || change.status==='loading') documentChanged(id);
 });
-chrome.tabs.onRemoved.addListener(id=>{ if(id===setupRun?.tabId)cancelPreparing(); if (id===sourceTab) clear(); else focusRevision++; });
+chrome.tabs.onRemoved.addListener(documentChanged);
