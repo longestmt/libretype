@@ -75,12 +75,20 @@ automatically by the installer.
 The source change after build 62 accepts commas, exclamation marks and question
 marks in verified recurring profile phrases. Existing profiles remain readable
 in the new source, but build 62 and earlier reject a vault containing a profile
-with those newly accepted characters. The change is not installed yet. Before
-shipping it, verify upgrade and rollback with a disposable vault; use a matching
-pre-upgrade data snapshot for an older build. Preserve newer data separately
+with those newly accepted characters. The change is not installed yet. Use a
+matching pre-upgrade data snapshot for an older build. Preserve newer data separately
 before any restoration, since restoring an older snapshot cannot retain writing
 recorded after that snapshot. Never reset a user's history merely to make a
 downgrade work.
+
+A disposable storage check linked separate probe executables against build 62's
+source and the punctuation fix. The older executable created three invented
+records and a compatible profile. The newer one read that vault and saved the
+punctuated profile; the older one then rejected it without changing its file.
+Restoring the saved pre-upgrade snapshot made its original profile and all three
+records readable again. This exercised the production vault and encryption
+functions with a synthetic key. It did not access real writing or Keychain and
+does not establish native app upgrade, permission, or settings continuity.
 
 
 ## Build 61 source validation
