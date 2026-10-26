@@ -51,6 +51,27 @@ verified as local GGUF. Its downloaded size was 2,497,293,931 bytes, consistent
 with the [registry's approximate 2.5 GB size](https://ollama.com/library/qwen3:4b).
 Weights are separate from the application and are not publication inputs.
 
+## Recurring phrase punctuation
+
+The source validator now retains commas, exclamation marks and question marks
+in supported recurring phrases. Previously, a model-selected `Cheers!` was
+discarded even when it occurred in all three eligible samples. This contradicted
+the profile prompt's request for complete greetings and sign-offs.
+
+Regression checks reproduce the previous rejection and verify complete phrases,
+two distinct supporting samples, contact-detail and invented-entry rejection,
+and an encrypted profile round trip through the production storage functions.
+The all-target suites passed (204 library and 245 binary tests, with overlap;
+13 and 20 ignored). One unrelated local metadata-server test failed on the first
+run and passed both individually and in the complete retry.
+
+This is a deterministic validation fix, not evidence that a model selects every
+useful phrase or reliably applies it during completion. Existing profiles do not
+gain discarded entries until rebuilt. The change is in source only; installed
+build 62 remains unchanged. Older builds reject profiles containing these newly
+accepted characters; preserve a pre-upgrade history-vault backup if a downgrade
+will be needed.
+
 ## Exploratory personalization check
 
 On 2026-10-24, `examples/style_probe.rs` exercised the production profile builder

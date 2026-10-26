@@ -181,6 +181,29 @@ pub(crate) mod tests {
         data
     }
     #[test]
+    fn complete_recurring_signoffs_survive_profile_validation_and_storage() {
+        let config = Config::default();
+        let mut data = synthetic_data();
+        let build = BuildRequest::new(&data, &config, 1, 30).unwrap();
+        let profile = build
+            .finish(
+                &config,
+                r#"{"guidance":"Brief, friendly messages.","vocabulary":["Cheers!"]}"#,
+            )
+            .unwrap();
+        assert_eq!(profile.vocabulary, ["Cheers!"]);
+        data.set_profile(profile).unwrap();
+        let key = super::super::store::MasterKey::from_bytes([7; 32]);
+        let encrypted = super::super::store::encrypt(&data, &key).unwrap();
+        let restored = super::super::store::decrypt(&encrypted, &key).unwrap();
+        restored.validate().unwrap();
+        let profile = restored.profile.as_ref().unwrap();
+        assert!(profile
+            .instruction(Strength::Strong)
+            .unwrap()
+            .contains("Cheers!"));
+    }
+    #[test]
     fn vocabulary_is_verified_after_source_and_retention_filtering() {
         let mut data = synthetic_data();
         for (record, text) in data.records.iter_mut().zip(SYNTHETIC_VOCABULARY_SAMPLES) {

@@ -24,10 +24,15 @@ fn entry_valid(text: &str) -> bool {
         && text.split_whitespace().count() <= 6
         && text.chars().any(char::is_alphabetic)
         && !text.contains("  ")
+        // Complete greetings and sign-offs can contain sentence punctuation;
+        // supported() still requires the exact phrase in two distinct samples.
         && text.chars().all(|c| {
             c.is_alphanumeric()
                 || is_combining_mark(c)
-                || matches!(c, ' ' | '-' | '_' | '.' | '+' | '#' | '/' | '\'' | '’')
+                || matches!(
+                    c,
+                    ' ' | '-' | '_' | '.' | ',' | '!' | '?' | '+' | '#' | '/' | '\'' | '’'
+                )
         })
 }
 pub fn valid(entries: &[String]) -> bool {
@@ -113,6 +118,33 @@ mod tests {
     use super::*;
     fn strings(values: &[&str]) -> Vec<String> {
         values.iter().map(|s| (*s).into()).collect()
+    }
+    #[test]
+    fn recurring_phrases_keep_punctuation_without_relaxing_source_checks() {
+        let samples = strings(&[
+            "Hello, Niamh! Are you ready? All set. Kind regards, Niamh. Contact niamh@example.invalid. One time only!",
+            "Hello, Niamh! Are you ready? The work is ready. Kind regards, Niamh. Email niamh@example.invalid.",
+        ]);
+        let entries = supported(
+            &strings(&[
+                "Hello, Niamh!",
+                "Are you ready?",
+                "Kind regards,",
+                "One time only!",
+                "Invented farewell!",
+                "niamh@example.invalid",
+                "example",
+                "<think>!",
+                "Hello,\nNiamh!",
+            ]),
+            &samples,
+        );
+        assert_eq!(
+            entries,
+            strings(&["Hello, Niamh!", "Are you ready?", "Kind regards,"])
+        );
+        assert!(valid(&entries));
+        assert!(supported(&strings(&["Cheers!"]), &strings(&["Cheers!", "CHEERS!"])).is_empty());
     }
     #[test]
     fn requires_two_distinct_samples_not_repetition_or_invented_terms() {

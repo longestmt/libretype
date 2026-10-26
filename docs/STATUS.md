@@ -153,7 +153,11 @@ all original settings restored; clipboard context and history remained off.
 
 1. **Personalization quality.** The native storage/profile lifecycle works, but
    inferred spelling conventions and explicit-instruction priority have known
-   failures. An explicit-preference reminder improved one Gemma spelling conflict
+   failures. A source fix now preserves punctuation in model-selected recurring
+   greetings and sign-offs, which previously dropped valid entries such as
+   `Cheers!`. Source-support and encrypted-round-trip tests pass; this fix is
+   not yet installed and does not resolve model extraction or preference quality.
+   An explicit-preference reminder improved one Gemma spelling conflict
    and one Qwen sign-off conflict while preserving compatible-name controls.
    Removing a conflicting blanket vocabulary-spelling directive also corrected
    the earlier neighbour/neighbor case on Gemma. Twenty additional paired cases
