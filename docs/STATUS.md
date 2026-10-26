@@ -147,8 +147,11 @@ inventory check passed. Dynamic library paths refer only to macOS system files.
 2. **Editor coverage.** Verify code-editor chat versus source policies and terminal
    AI prompt/multiplexer layouts. Basic VSCodium source behavior and the reported
    spreadsheet workflow are already verified; they do not establish these other
-   cases. Orca has no verified dedicated integration. Native verification of the
-   zero-width editor rejection also remains outstanding.
+   cases. Orca has no verified dedicated integration. Build 58's disposable
+   Chrome check passed for zero-width and zero-height inputs: the user reported
+   suggestions only in the visible control, and native diagnostics recorded
+   suppression followed by a visible suggestion after returning to that control.
+   This establishes those two synthetic layouts, not every hidden-editor case.
 3. **Optional live screen context.** Build 46's in-memory OCR sample recognized an
    invented workshop notice and used its time in a completion. That verifies the
    preview pipeline, not capture of another application's window. Live capture
