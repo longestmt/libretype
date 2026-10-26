@@ -1,5 +1,11 @@
 # Status and limitations
 
+Version 1.0.0 (build 67) was published on 2026-10-26 with GPLv3 notices and matching
+complete source. Anonymous download/checksum verification passed; see the
+[publication record](RELEASE_1_0.md#publication-result). Build 67 changes release
+notices, source location and documentation from the verified build 66 typing
+candidate. The historical checks and known feature limits below remain applicable.
+
 As of 2026-10-26, the current source passes its deterministic Rust test suites.
 Optional live tests are ignored by default and need deliberate execution.
 
