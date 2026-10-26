@@ -11,6 +11,7 @@ pub mod emoji;
 pub mod history;
 mod local_http;
 pub mod model;
+pub mod model_catalog;
 pub mod model_setup;
 pub mod screen_context;
 pub mod shortcuts;

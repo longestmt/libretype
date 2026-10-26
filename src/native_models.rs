@@ -134,6 +134,7 @@ impl ModelUi {
         &mut self,
         config: &Config,
         installed: &[String],
+        availability: Option<&str>,
     ) -> (Option<String>, bool) {
         let mut selected = None;
         while let Ok((id, choice, result)) = self.replies.try_recv() {
@@ -187,11 +188,11 @@ impl ModelUi {
                 "{}\n{}\n{}",
                 CHOICES.get(choice).map(|c|c.description).unwrap_or("Installed through Ollama. Memory needs and quality depend on the model. Use Ollama to download or update models outside this catalog."),
                 CHOICES.get(choice).map(|c| c.license_label()).unwrap_or("Separately installed model: check its publisher’s license."),
-                if present {
+                availability.unwrap_or(if present {
                     "Installed locally."
                 } else {
                     "Not in the installed model list; download or refresh."
-                }
+                })
             ),
         );
         set_text(self.active, &format!("Active model: {}", config.model));
@@ -215,7 +216,7 @@ impl ModelUi {
         let _: () =
             msg_send![self.download,setEnabled:if busy || choice>=CHOICES.len(){NO}else{YES}];
         let _: () = msg_send![self.cancel,setEnabled:if snapshot.phase.busy() && snapshot.phase!=Phase::Cancelling{YES}else{NO}];
-        let _: () = msg_send![self.use_model,setEnabled:if !busy && (present || (snapshot.phase==Phase::Ready && snapshot.choice==choice)){YES}else{NO}];
+        let _: () = msg_send![self.use_model,setEnabled:if !busy && availability.is_none() && (present || (snapshot.phase==Phase::Ready && snapshot.choice==choice)){YES}else{NO}];
         let _: () = msg_send![self.choices,setEnabled:if busy{NO}else{YES}];
         (selected, ready)
     }
@@ -337,7 +338,8 @@ extern "C" fn open_ollama(_: &Object, _: Sel, _: id) {
                 let opened: BOOL = msg_send![workspace,launchApplication:name];
                 let _: () = msg_send![name, release];
                 s.model_setup.message = if opened == YES {
-                    "Ollama opened. Refresh installed models when it is ready.".into()
+                    s.model_catalog.refresh();
+                    "Ollama opened. Checking installed models automatically…".into()
                 } else {
                     "Ollama was not found. Use Get Ollama to install the Mac app, then open it."
                         .into()

@@ -43,7 +43,11 @@ and public release hosting are not configured.
 
 Keep Ollama running, open LibreType, select a local model and grant Accessibility
 for suggestions in other apps. The Settings preview works without that permission.
-The LT menu provides settings, pause/resume and model selection.
+The LT menu provides settings, pause/resume and model selection. If LibreType
+opens before Ollama is ready, it retries the model lookup automatically. The menu
+and Local models window distinguish an unavailable service from a missing model.
+Use **Open Ollama** in Local models if the service is stopped; LibreType keeps your
+selected model and never downloads or switches models automatically.
 
 ## Default controls
 

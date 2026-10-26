@@ -1254,8 +1254,7 @@ struct State {
     last_app_name: String,
     preview_epoch: Option<u64>,
     preview_context: Option<(String, String)>,
-    preview_results: mpsc::Receiver<Result<Vec<String>, String>>,
-    models_sender: mpsc::Sender<Result<Vec<String>, String>>,
+    model_catalog: crate::model_catalog::Discovery,
     last_diagnostic: Instant,
     textedit_diagnostic: serde_json::Value,
     pipeline_status: &'static str,
@@ -1793,10 +1792,13 @@ impl State {
             },
         );
         let _: () = msg_send![self.pause_app_item, setEnabled:if self.app_allowed(&self.last_app) { YES } else { NO }];
+        let catalog_health = self.model_catalog.health(&self.config.model, &self.models);
         let health = if !AXIsProcessTrusted() {
             "Accessibility permission needed"
         } else if self.tap.is_null() {
             "Keyboard shortcut permission needed"
+        } else if let Some(message) = catalog_health {
+            message
         } else {
             &self.status_text
         };
@@ -1953,6 +1955,7 @@ impl State {
         let capture = CAPTURE_STATUS.with(Cell::get);
         let snapshot = serde_json::json!({
             "capture": capture,
+            "model_catalog": self.model_catalog.diagnostic(),
             "history": self.history.diagnostic(&self.config),
             "screen_context": self.screen.diagnostic(self.config.background.screen),
             "request_profile_attached": self.request_profile_attached,
@@ -2011,12 +2014,21 @@ impl State {
         self.process_control();
         self.statistics.poll();
         self.startup.poll();
-        let (activate, refresh) = self.model_setup.poll(&self.config, &self.models);
+        if let Some(result) = self.model_catalog.poll(Instant::now()) {
+            // Retain the last known choices without advertising them as available.
+            // This also preserves the model dialog's selection during an outage.
+            if let Ok(models) = result {
+                self.models = models;
+            }
+            self.rebuild_models();
+        }
+        let (activate, refresh) = self.model_setup.poll(
+            &self.config,
+            &self.models,
+            self.model_catalog.availability_message(),
+        );
         if refresh {
-            let sender = self.models_sender.clone();
-            std::thread::spawn(move || {
-                let _ = sender.send(model::list_models().map_err(|e| e.to_string()));
-            });
+            self.model_catalog.refresh();
         }
         if let Some(tag) = activate {
             let mut config = self.config.clone();
@@ -2085,16 +2097,6 @@ impl State {
             }
         }
         self.prepare_accessibility();
-        while let Ok(models) = self.preview_results.try_recv() {
-            match models {
-                Ok(models) => {
-                    self.models = models;
-                    self.rebuild_models();
-                    self.status_text = format!("Model: {}", self.config.model);
-                }
-                Err(e) => self.status_text = e,
-            }
-        }
         self.process_screen_replies();
         self.process_choice_replies();
         while let Ok(reply) = self.replies.try_recv() {
@@ -2130,6 +2132,7 @@ impl State {
             }
             match reply.result {
                 Ok(s) => {
+                    self.status_text = format!("Model: {}", self.config.model);
                     let valid = match (&self.context, capture(&self.config)) {
                         (Some(a), Some(b)) => a.same(&b),
                         _ => false,
@@ -2461,14 +2464,19 @@ impl State {
         let item: id = msg_send![self.menu,itemWithTag:10isize];
         let submenu: id = msg_send![class!(NSMenu), new];
         let _: () = msg_send![submenu,setAutoenablesItems:NO];
-        for (index, model) in self.models.iter().enumerate() {
-            let it = menu_item(submenu, model, sel!(chooseModel:), self.target);
-            let _: () = msg_send![it,setTag:(index as isize)];
-            let _: () = msg_send![it,setState:if *model==self.config.model{1isize}else{0isize}];
-        }
-        if self.models.is_empty() {
-            let it = menu_item(submenu, "No local models found", sel!(noop:), self.target);
+        if let Some(message) = self.model_catalog.availability_message() {
+            let it = menu_item(submenu, message, sel!(noop:), self.target);
             let _: () = msg_send![it,setEnabled:NO];
+        } else {
+            for (index, model) in self.models.iter().enumerate() {
+                let it = menu_item(submenu, model, sel!(chooseModel:), self.target);
+                let _: () = msg_send![it,setTag:(index as isize)];
+                let _: () = msg_send![it,setState:if *model==self.config.model{1isize}else{0isize}];
+            }
+            if self.models.is_empty() {
+                let it = menu_item(submenu, "No local models found", sel!(noop:), self.target);
+                let _: () = msg_send![it,setEnabled:NO];
+            }
         }
         let _: () = msg_send![item,setSubmenu:submenu];
         let _: () = msg_send![submenu, release];
@@ -2547,11 +2555,8 @@ extern "C" fn on_model(_: &Object, _: Sel, sender: id) {
 }
 extern "C" fn on_refresh(_: &Object, _: Sel, _: id) {
     STATE.with(|s| {
-        if let Some(s) = s.borrow().as_ref() {
-            let tx = s.models_sender.clone();
-            std::thread::spawn(move || {
-                let _ = tx.send(model::list_models().map_err(|e| e.to_string()));
-            });
+        if let Some(s) = s.borrow_mut().as_mut() {
+            s.model_catalog.refresh();
         }
     });
 }
@@ -3377,11 +3382,7 @@ pub fn run() -> Result<(), String> {
             });
         }
     });
-    let (models_sender, preview_results) = mpsc::channel();
-    let initial_models = models_sender.clone();
-    std::thread::spawn(move || {
-        let _ = initial_models.send(model::list_models().map_err(|e| e.to_string()));
-    });
+    let model_catalog = crate::model_catalog::Discovery::new()?;
     unsafe {
         let pool: id = msg_send![class!(NSAutoreleasePool), new];
         let app: id = msg_send![class!(NSApplication), sharedApplication];
@@ -3581,8 +3582,7 @@ pub fn run() -> Result<(), String> {
                 last_app_name: String::new(),
                 preview_epoch: None,
                 preview_context: None,
-                preview_results,
-                models_sender,
+                model_catalog,
                 last_diagnostic: Instant::now(),
                 textedit_diagnostic: serde_json::Value::Null,
                 pipeline_status: "Starting",
