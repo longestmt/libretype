@@ -48,6 +48,35 @@ pub fn choose(windows: &[Window], pid: i32, caret: [f64; 2]) -> Option<Window> {
         .find(|w| w.pid == pid && w.layer == 0 && w.visible)?;
     window.normalized_caret(caret).map(|_| *window)
 }
+
+/// An accessibility window anchors selection to the window containing the
+/// focused editor. Auxiliary windows can precede it in the window-server list.
+/// Never select a different window merely because it happens to cover the caret.
+pub fn choose_focused(
+    windows: &[Window],
+    pid: i32,
+    caret: [f64; 2],
+    focused_bounds: [f64; 4],
+) -> Option<Window> {
+    if !focused_bounds.iter().all(|v| v.is_finite())
+        || focused_bounds[2] < 32.0
+        || focused_bounds[3] < 32.0
+    {
+        return None;
+    }
+    let mut matches = windows.iter().filter(|w| {
+        w.pid == pid
+            && w.valid()
+            && w.bounds
+                .iter()
+                .zip(focused_bounds)
+                .all(|(a, b)| (a - b).abs() <= 2.0)
+            && w.normalized_caret(caret).is_some()
+    });
+    let window = *matches.next()?;
+    // Geometry alone cannot distinguish coincident windows belonging to an app.
+    matches.next().is_none().then_some(window)
+}
 pub struct Line {
     pub text: String,
     /// Vision coordinates: normalized, origin at bottom left.
@@ -86,6 +115,61 @@ pub fn nearby_text(mut lines: Vec<Line>, caret: [f64; 2]) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn focused_window_anchor_skips_auxiliary_windows_without_guessing() {
+        let focused = Window {
+            id: 10,
+            pid: 42,
+            bounds: [-1200., -300., 1000., 700.],
+            layer: 0,
+            visible: true,
+        };
+        let auxiliary = Window {
+            id: 11,
+            bounds: [0., 0., 200., 100.],
+            ..focused
+        };
+        let caret = [-700., 50.];
+        assert_eq!(choose(&[auxiliary, focused], 42, caret), None);
+        assert_eq!(
+            choose_focused(&[auxiliary, focused], 42, caret, focused.bounds),
+            Some(focused)
+        );
+        assert_eq!(choose_focused(&[focused], 43, caret, focused.bounds), None);
+        assert_eq!(
+            choose_focused(&[focused], 42, [500., 300.], focused.bounds),
+            None
+        );
+        assert_eq!(
+            choose_focused(&[focused], 42, caret, auxiliary.bounds),
+            None
+        );
+        for invalid in [
+            Window {
+                visible: false,
+                ..focused
+            },
+            Window {
+                layer: 3,
+                ..focused
+            },
+            Window {
+                bounds: [-1203., -300., 1000., 700.],
+                ..focused
+            },
+        ] {
+            assert_eq!(choose_focused(&[invalid], 42, caret, focused.bounds), None);
+        }
+        let duplicate = Window { id: 12, ..focused };
+        assert_eq!(
+            choose_focused(&[focused, duplicate], 42, caret, focused.bounds),
+            None
+        );
+        assert_eq!(
+            choose_focused(&[focused], 42, caret, [f64::NAN, 0., 1000., 700.]),
+            None
+        );
+    }
     #[test]
     fn window_selection_preserves_identity_on_secondary_displays() {
         let front = Window {

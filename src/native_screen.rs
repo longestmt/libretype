@@ -70,10 +70,38 @@ impl Drop for Image {
     }
 }
 
-unsafe fn active_window(ctx: &Context) -> Option<Window> {
+unsafe fn active_window(ctx: &Context) -> Result<Window, &'static str> {
+    // Use the focused field's own window, not an arbitrary same-app window.
+    // If the provider lacks AXWindow, retain the original strict front-window
+    // rule. An exposed but invalid window must not fall back to another one.
+    let focused_bounds = if let Some(window) =
+        attr(ctx.focused.0, "AXWindow").or_else(|| attr(ctx.element.0, "AXWindow"))
+    {
+        let mut owner = 0;
+        if AXUIElementSetMessagingTimeout(window.0, 0.08) != 0
+            || AXUIElementGetPid(window.0, &mut owner) != 0
+            || owner != ctx.pid
+            || attr(window.0, "AXRole")
+                .and_then(|v| string(v.0))
+                .as_deref()
+                != Some("AXWindow")
+        {
+            return Err("Focused accessibility window identity unavailable");
+        }
+        let bounds =
+            element_bounds(window.0).ok_or("Focused accessibility window bounds unavailable")?;
+        Some([
+            bounds.origin.x,
+            bounds.origin.y,
+            bounds.size.width,
+            bounds.size.height,
+        ])
+    } else {
+        None
+    };
     let list = OwnedCf(CGWindowListCopyWindowInfo(1 | 16, 0)); // on-screen, excluding desktop
     if list.0.is_null() {
-        return None;
+        return Err("On-screen window list unavailable");
     }
     let array = list.0 as id;
     let count: usize = msg_send![array, count];
@@ -102,7 +130,13 @@ unsafe fn active_window(ctx: &Context) -> Option<Window> {
             ],
         });
     }
-    screen_context::choose(&windows, ctx.pid, [ctx.caret.origin.x, ctx.caret.origin.y])
+    let caret = [ctx.caret.origin.x, ctx.caret.origin.y];
+    match focused_bounds {
+        Some(bounds) => screen_context::choose_focused(&windows, ctx.pid, caret, bounds)
+            .ok_or("Focused accessibility window did not match uniquely"),
+        None => screen_context::choose(&windows, ctx.pid, caret)
+            .ok_or("No matching foreground window contains the caret"),
+    }
 }
 
 struct ImageWork {
@@ -408,30 +442,34 @@ impl State {
                 "Screen permission unavailable"
             } else if capture_selected(&self.config, 0.08, true).is_none_or(|now| !ctx.same(&now)) {
                 "Focused context changed before capture"
-            } else if let Some(window) = active_window(ctx) {
-                let caret = window
-                    .normalized_caret([ctx.caret.origin.x, ctx.caret.origin.y])
-                    .unwrap();
-                let id = work.id();
-                self.screen.pending = Some(Pending {
-                    work,
-                    config: self.config.clone(),
-                    window: Some(window),
-                    started: Instant::now(),
-                });
-                self.screen.last_stage = "Capturing active window";
-                self.screen.capture_requests = self.screen.capture_requests.saturating_add(1);
-                start_capture(
-                    window,
-                    caret,
-                    id,
-                    self.epoch.clone(),
-                    self.screen.images.clone(),
-                    self.screen.result_sender.clone(),
-                );
-                return true;
             } else {
-                "No matching foreground window contains the caret"
+                match active_window(ctx) {
+                    Ok(window) => {
+                        let caret = window
+                            .normalized_caret([ctx.caret.origin.x, ctx.caret.origin.y])
+                            .unwrap();
+                        let id = work.id();
+                        self.screen.pending = Some(Pending {
+                            work,
+                            config: self.config.clone(),
+                            window: Some(window),
+                            started: Instant::now(),
+                        });
+                        self.screen.last_stage = "Capturing active window";
+                        self.screen.capture_requests =
+                            self.screen.capture_requests.saturating_add(1);
+                        start_capture(
+                            window,
+                            caret,
+                            id,
+                            self.epoch.clone(),
+                            self.screen.images.clone(),
+                            self.screen.result_sender.clone(),
+                        );
+                        return true;
+                    }
+                    Err(reason) => reason,
+                }
             }
         } else {
             "No focused context"
@@ -502,7 +540,7 @@ impl State {
         if !preview {
             let valid = match (&self.context, capture_selected(&self.config, 0.08, true)) {
                 (Some(old), Some(now)) => {
-                    permitted() && old.same(&now) && active_window(&now) == pending.window
+                    permitted() && old.same(&now) && active_window(&now).ok() == pending.window
                 }
                 _ => false,
             };
