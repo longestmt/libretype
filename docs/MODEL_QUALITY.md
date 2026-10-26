@@ -191,3 +191,31 @@ personalization on and off, retaining learned vocabulary in the outgoing prompt.
 Those deterministic tests verify routing and preservation, not model semantics.
 These experiments did not load history, change application preferences or replace
 the installed application. Profile extraction quality remains separate work.
+
+### Bounded spelling-observation experiments
+
+Two later experiments supplemented model-built guidance with a conservative
+word-family detector operating only on the profile builder's eligible samples.
+It required at least three distinct spelling families, each in two distinct
+samples, and rejected mixed evidence. Repeated case/spacing/punctuation variants,
+URLs and identifiers did not supply independent evidence. Deterministic checks
+also covered source exclusions, retention and the profile length bound.
+
+For each experiment, two profiles were built from the existing invented British
+and American samples. Each completion had a paired control with only the added
+spelling observation removed; model-generated guidance and vocabulary stayed
+identical. The first observation improved default colour/favourite/honour output
+and the American check context, but worsened explicit American overrides for
+favourite, honour and cheque. Conditional fallback wording restored the favourite
+and cheque overrides but still returned honour where its paired control returned
+honor. Neither detector variant was adopted.
+
+The two experiments made four profile builds and 84 completions on Gemma4 E4B,
+without transport errors. The labour sentence allowed a laboratory-equipment
+reading and was not scored as a spelling error; dinner suggestions varied
+plausibly and do not establish topic independence. Additional centre, flavour,
+neighbour and behaviour contexts were prepared before inspecting results but
+were not executed because the override gate failed. All writing was synthetic;
+application history, settings and the installed build were untouched. This
+narrows the next investigation to combining learned conventions with explicit
+instructions, rather than merely extracting more spelling evidence.
