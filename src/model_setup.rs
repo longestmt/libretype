@@ -29,10 +29,10 @@ pub const CHOICES:[Choice;9]=[
     Choice{tag:"qwen3:1.7b",title:"Qwen3 1.7B",description:"Lightweight starting choice. About 1.4 GB download. Tested on a 16 GB M1; completion quality varies."},
     Choice{tag:"gemma3:1b",title:"Gemma3 1B",description:"Smallest download in this catalog: about 0.8 GB. Optional for memory-constrained Macs; separate restricted terms apply."},
     Choice{tag:"gemma4:e2b-it-q4_K_M",title:"Gemma4 E2B",description:"About 4.6 GB download. Prefer 16 GB or more memory. Faster in small M1 tests, but missed some suggestions and personalized poorly."},
-    Choice{tag:"qwen3:4b",title:"Qwen3 4B",description:"About 2.5 GB download. Prefer 16 GB or more memory. Larger models may produce slower suggestions; quality testing is pending."},
+    Choice{tag:"qwen3:4b",title:"Qwen3 4B",description:"About 2.5 GB download. Prefer 16 GB or more memory. Fast in small M1 writing tests; some grammar and learned-preference errors remain."},
     Choice{tag:"gemma3:4b",title:"Gemma3 4B",description:"About 3.4 GB download. Prefer 16 GB or more memory. Larger models may produce slower suggestions; quality testing is pending."},
     Choice{tag:"gemma4:e4b-it-q4_K_M",title:"Gemma4 E4B",description:"About 6.6 GB download. Prefer 16 GB or more memory. An earlier E4B version performed well in writing tests; this variant needs testing."},
-    Choice{tag:"qwen3:8b",title:"Qwen3 8B",description:"About 5.2 GB download. Prefer 16 GB or more memory, with room for other apps. Completion-quality and speed testing are pending."},
+    Choice{tag:"qwen3:8b",title:"Qwen3 8B",description:"About 5.2 GB download. Prefer 16 GB or more memory, with room for other apps. Tested on a 16 GB M1; did not resolve learned spelling conflicts."},
     Choice{tag:"gemma4:26b-a4b-it-q4_K_M",title:"Gemma4 26B A4B",description:"About 18 GB download. Prefer 32 GB or more memory. Only part of this model is active per token, but the full model needs memory. Testing is pending."},
     Choice{tag:"qwen3:30b",title:"Qwen3 30B A3B",description:"About 19 GB download. Prefer 32 GB or more memory. Only part of this model is active per token, but the full model needs memory. Testing is pending."},
 ];
