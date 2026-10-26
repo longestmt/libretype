@@ -77,6 +77,11 @@ These checks do not replace contributor review or verification after upload.
 
 ## Distribution
 
+- [x] Push the reviewed source to the private `release/1.0-candidate` branch
+  and stage a private draft prerelease, `v1.0.0-rc.1`, targeting the candidate's
+  exact source revision. The app zip, complete-source archive and checksum file
+  were downloaded back from the draft and matched their local hashes and GitHub
+  asset digests. The repository remains private and the release unpublished.
 - [ ] Finish the contributor/provenance review recorded in
   [third-party review](../third_party/REVIEW.md).
 - [x] Prepare the source/developer distribution path. The maintainer has no Apple
@@ -89,7 +94,7 @@ These checks do not replace contributor review or verification after upload.
   installation/known-limit notes; verify the downloads. Follow
   [RELEASING.md](RELEASING.md). A private commit or local archive is not publication.
 
-The [candidate release notes](RELEASE_NOTES_1_0.md) are prepared locally. This
+The [candidate release notes](RELEASE_NOTES_1_0.md) are attached to the private draft. This
 distribution choice does not mark the remaining acceptance or publication items
 complete and does not authorize changing the repository's visibility.
 
