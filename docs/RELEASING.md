@@ -143,6 +143,29 @@ continuity. Nothing was published, and the contributor, certificate signing
 and distribution review gates remain open.
 
 
+## Build 63 source validation
+
+Build 63 is prepared from revision
+`3e5311f242a2dba15c9cb7dab87f82faf101903c`. It includes the profile punctuation
+fix and companion 0.1.6. The installed app remains build 62; the standalone
+extension is already available independently.
+
+The matching `libretype-build63-source.tar.gz` archive has SHA-256
+`4ae328d9a489f1d4265d81c83d773bd8dbcb736bb529f374658a3ed942db1851`.
+All 12,846 manifest hashes matched. An initial validation run ended without a
+completion record; its logs were retained and it is not counted as a pass.
+A fresh run with two compiler jobs, an empty Cargo cache and Cargo networking
+disabled passed the release build, all-target Rust suites (204 library and 245
+application tests, with overlap), 18 packaging tests, 27 companion tests and
+the notice inventory check.
+
+The exported source produced a bundle with a valid strict ad-hoc signature,
+145 byte-verified dependency/runtime notice files, and byte-matching companion
+0.1.6 scripts. The temporary rebuild was removed. The signed executables were
+not byte-identical to the prepared bundle, so this proves offline buildability,
+not reproducibility. Native build 63 installation and startup are still pending;
+no binary or source release was published.
+
 ## References
 
 - https://www.gnu.org/licenses/gpl-3.0.html (especially sections 1, 4–6 and 10)

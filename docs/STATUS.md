@@ -1,6 +1,6 @@
 # Status and limitations
 
-As of 2026-10-25, the current source passes its deterministic Rust test suites.
+As of 2026-10-26, the current source passes its deterministic Rust test suites.
 Optional live tests are ignored by default and need deliberate execution.
 
 Verified workflows include basic suggestion display/acceptance in the tested
@@ -198,8 +198,8 @@ all original settings restored; clipboard context and history remained off.
    inventories refresh once a minute. Local HTTP integration tests verify recovery,
    local-only model filtering, malformed replies, response-size and whole-request
    limits; scheduler tests cover backoff, concurrent refresh requests and worker
-   failure. Build 61 is running with Accessibility and keyboard shortcuts active;
-   its live model catalog reports available, and settings are unchanged. Native
+   failure. The build 61 check verified Accessibility and keyboard shortcuts;
+   its live model catalog was available, and settings were unchanged. Native
    suggestion display and Shift-Tab insertion passed the user’s unsent-draft
    check. The user did not identify which of the offered apps was tested. These
    checks do not establish actual login launch or a clean-machine installation.
@@ -212,7 +212,9 @@ all original settings restored; clipboard context and history remained off.
 4. **Release delivery.** The dependency replacements remove the two missing-notice
    issues, and build 49 passed the native insertion check. The build 61 source
    export rebuilt and passed tests offline with an empty Cargo cache; the build
-   62 export subsequently passed the same validation. Both rebuilt bundles
+   62 export subsequently passed the same validation. Build 63 is prepared and
+   its matching source also rebuilt and passed tests offline; it is not installed.
+   All three rebuilt bundles
    retained the notices and verified their ad-hoc signatures. This does not
    establish bit-for-bit reproducibility or public-release readiness. Complete contributor review
    documented in [release instructions](RELEASING.md), then verify signing,
