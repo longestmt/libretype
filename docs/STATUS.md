@@ -252,7 +252,9 @@ menu. After the pointer-position correction in companion 0.1.7, a live check
 enabled screen reader and braille support from Off and verified both after a
 page reload. The other test-state checkbox values were preserved; the original
 collaborator-announcement preference was restored afterward. An already-enabled
-follow-up returned a review result and is not counted as a pass. Browser-restart
+follow-up returned a review result and is not counted as a pass. Companion 0.1.8
+adds fixed, text-free interruption and step-timeout reasons, with 34 synthetic
+tests passing; live verification of those diagnostics is pending. Browser-restart
 persistence remains unverified. Selected-text alternatives, emoji/spelling replacements, tables,
 browser zoom and complex layouts are not covered by this support claim.
 Cross-Mac synchronization is outside the project scope.

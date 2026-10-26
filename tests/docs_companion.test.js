@@ -347,12 +347,12 @@ function setupHarness(initial={}) {
     getAttribute:attribute=>attribute==='aria-disabled'?'false':null,
     dispatchEvent(event){if(event.type==='click')activate(event);},click(){activate();},
   }};
-  const tools=element('Tools',()=>true,()=>{state.menu=true});
-  const item=element('Accessibility',()=>state.menu,()=>{state.menu=false;state.dialog=true});
+  const tools=element('Tools',()=>true,()=>{if(!state.menuStuck)state.menu=true});
+  const item=element('Accessibility',()=>state.menu,()=>{state.menu=false;if(!state.dialogStuck)state.dialog=true});
   const label=element('Accessibility',()=>state.menu);label.closest=()=>item;
   const heading={textContent:'Accessibility settings'};
   function input(key,label) {
-    const box=element(label,()=>state.dialog,()=>{state[key]=!state[key];state.afterClick?.(key)});
+    const box=element(label,()=>state.dialog,()=>{if(!state.optionsStuck)state[key]=!state[key];state.afterClick?.(key)});
     box.labels=[{textContent:label}];
     Object.defineProperty(box,'checked',{get:()=>state[key]});
     if(key==='braille') Object.defineProperty(box,'disabled',{get:()=>!state.reader});
@@ -363,17 +363,18 @@ function setupHarness(initial={}) {
   const collaborators=input('collaborators','Turn on collaborator announcements');
   const magnifier=input('magnifier','Turn on screen magnifier support');
   const inputs=()=>[reader,...(state.missingBraille?[]:[braille]),collaborators,magnifier];
-  const ok=element('OK',()=>state.dialog,()=>{state.saved=true;state.dialog=false});
+  const ok=element('OK',()=>state.dialog,()=>{state.saved=true;if(!state.saveStuck)state.dialog=false});
   const dialog=element('dialog',()=>state.dialog);
   dialog.getAttribute=attribute=>attribute==='aria-labelledby'?'heading':null;
   dialog.querySelectorAll=selector=>selector==='input[type="checkbox"]'?inputs():selector==='button,[role="button"]'?[ok]:[];
   const document={get visibilityState(){return state.visible?'visible':'hidden'},
     getElementById:id=>id==='docs-tools-menu'?tools:id==='heading'?heading:null,
     querySelectorAll:selector=>selector==='[role="dialog"]'?[dialog]:selector==='.goog-menuitem-label'?[label]:[]};
-  const context=vm.createContext({document,window:{innerWidth:1024,innerHeight:768},location:{href:url},Date,setTimeout,
+  const context=vm.createContext({document,window:{innerWidth:1024,innerHeight:768},location:{href:url},Date:{now:()=>state.clock??Date.now()},
+    setTimeout:(fn,ms)=>{if(state.clock!==undefined){state.clock+=ms;queueMicrotask(fn);}else setTimeout(fn,ms)},
     MouseEvent:class{constructor(type,options){this.type=type;Object.assign(this,options);}},getComputedStyle:()=>({visibility:'visible'}),
     chrome:{runtime:{id:'test',onMessage:{addListener:fn=>{listener=fn}},
-      sendMessage:async message=>{assert.equal(message.type,'setupGuard');return {allowed:state.allowed};}}}});
+      sendMessage:async message=>{assert.equal(message.type,'setupGuard');return state.guard ? state.guard(message) : {allowed:state.allowed,reason:state.reason};}}}});
   vm.runInContext(fs.readFileSync(path.join(root,'setup.js'),'utf8'),context);
   const invoke=(message={type:'setupAccessibility'},sender={id:'test'})=>new Promise(resolve=>{
     let answered=false;
@@ -453,4 +454,75 @@ test('active setup rejects a changed document even before a navigation event arr
     return {result:'review'};
   };
   assert.equal((await requestSetup(h)).result,'review');
+});
+
+// Exercise the actual worker/content boundary: an interrupted setup must preserve
+// the reason while still stopping before a save or the next checkbox change.
+test('focus changes and companion opt-out retain distinct reasons across setup and popup status',async()=>{
+  for(const reason of ['focus_changed','off']) {
+    const worker=harness();const page=setupHarness();
+    page.state.guard=message=>worker.context.route(message,sender());
+    page.state.afterClick=key=>{
+      if(key!=='reader')return;
+      if(reason==='focus_changed')worker.chrome.tabs.onActivated.listeners.forEach(fn=>fn({tabId:3}));
+      else worker.context.native=async()=>({enabled:false,accepted:false});
+    };
+    worker.chrome.tabs.sendMessage=()=>page.invoke();
+    const reply=await requestSetup(worker);
+    assert.equal(reply.result,'review');assert.equal(reply.reason,reason);
+    assert.equal(page.state.braille,false);assert.equal(page.state.saved,undefined);
+    const status=await worker.context.route({type:'status'},popupSender());
+    assert.equal(status.setupReason,reason);
+    assert.equal(JSON.stringify(status).includes('synthetic_123'),false);
+  }
+});
+test('menu, dialog, option, and save timeouts identify the unfinished step',async()=>{
+  for(const [failure,reason] of [['menuStuck','menu_timeout'],['dialogStuck','dialog_timeout'],
+    ['optionsStuck','options_timeout'],['saveStuck','save_timeout']]) {
+    const h=setupHarness({[failure]:true,clock:0});
+    const reply=await h.invoke();
+    assert.equal(reply.result,'review');assert.equal(reply.reason,reason);
+    assert.equal(h.state.clicks.includes('OK'),failure==='saveStuck');
+  }
+});
+test('setup reasons distinguish existing dialogs, changed controls, and unavailable connections',async()=>{
+  for(const [initial,reason] of [[{dialog:true},'existing_dialog'],[{missingBraille:true},'controls_unavailable'],
+    [{offscreen:true},'offscreen'],[{visible:false},'focus_changed'],
+    [{allowed:false,reason:'private arbitrary text'},'guard_denied'],
+    [{guard:()=>{throw new Error('private arbitrary text')}},'connection_lost']]) {
+    const h=setupHarness(initial);assert.equal((await h.invoke()).reason,reason);
+    assert.equal(h.state.saved,undefined);
+  }
+  const h=setupHarness();h.state.afterClick=()=>{h.state.collaborators=false};
+  assert.equal((await h.invoke()).reason,'controls_changed');assert.equal(h.state.saved,undefined);
+});
+test('worker stores only allowed setup reasons and resets them for the next successful run',async()=>{
+  const h=harness();
+  for(const response of [{result:'review',reason:'private arbitrary text',text:'private document'},
+    {result:'saved',reason:'menu_timeout'}]) {
+    h.chrome.tabs.sendMessage=async()=>response;
+    const reply=await requestSetup(h);
+    assert.equal(reply.reason,undefined);
+    const status=await h.context.route({type:'status'},popupSender());
+    assert.equal(status.setupReason,null);
+    assert.equal(JSON.stringify(status).includes('private'),false);
+  }
+  h.chrome.tabs.sendMessage=async()=>({result:'review',reason:'dialog_timeout'});
+  await requestSetup(h);
+  assert.equal((await h.context.route({type:'status'},popupSender())).setupReason,'dialog_timeout');
+  h.chrome.tabs.sendMessage=async()=>({result:'saved'});await requestSetup(h);
+  assert.equal((await h.context.route({type:'status'},popupSender())).setupReason,null);
+});
+test('popup explains known setup failures without rendering arbitrary details',async()=>{
+  for(const [reason,expected] of [['focus_changed',/active document or window changed/],
+    ['dialog_timeout',/dialog did not open/],['save_timeout',/saving is not confirmed/],
+    ['private arbitrary text',/Setup stopped/],['toString',/Setup stopped/]]) {
+    const nodes={setup:{addEventListener(){}},status:{},result:{}};
+    const context=vm.createContext({document:{getElementById:id=>nodes[id]},chrome:{runtime:{
+      sendMessage:async()=>({enabled:true,setupResult:'review',setupReason:reason}),
+    }}});
+    vm.runInContext(fs.readFileSync(path.join(root,'popup.js'),'utf8'),context);
+    await Promise.resolve();assert.match(nodes.result.textContent,expected);
+    assert.equal(nodes.result.textContent.includes('private arbitrary text'),false);
+  }
 });

@@ -54,7 +54,7 @@ stop the operation. If it stops after opening the dialog, review or cancel that
 dialog before retrying; partially changed controls are not automatically saved.
 The popup retains manual instructions for unsupported layouts or languages.
 
-The 29 extension tests and the packaging checks pass. Synthetic browser checks
+The extension and packaging checks pass. Synthetic browser checks
 verified enabling missing options, leaving already-enabled options alone, and
 stopping without saving after interruption or unrelated preference changes.
 A live 0.1.6 check completed the save flow: the user supplied a screenshot showing
@@ -81,6 +81,15 @@ checkbox states were unchanged; a later native observation showed Chrome on a
 different page, but the exact interruption stage was not recorded. This attempt
 is not counted as successful live idempotence verification. Browser-restart
 persistence and other document layouts remain unverified.
+
+Companion 0.1.8 adds specific setup failure messages. Focus interruptions,
+a lost extension connection, a pre-existing dialog, unavailable/changed controls,
+and timeouts opening the menu, opening the dialog, enabling options, or confirming
+Save no longer share a single generic outcome. Only fixed reason codes are kept
+in worker memory; no document text, addresses, or raw error strings are retained.
+All 34 extension tests pass, including worker-to-content interruption checks,
+stalled-step checks and rejection of arbitrary diagnostic details. These are
+synthetic checks; the reason for the earlier live interruption remains unknown.
 
 Installed build 64 bundles companion 0.1.7. The independently loaded standalone
 0.1.7 extension remains available without another reload or permission change

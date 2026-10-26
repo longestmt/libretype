@@ -8,6 +8,12 @@ let needsClear = false;
 let focusRevision = 0;
 let setupRun = null;
 let setupResult = null;
+let setupReason = null;
+// Only fixed, text-free outcomes may leave the setup flow or survive in memory.
+const setupReasons = new Set(['focus_changed','off','expired','guard_denied','connection_lost',
+  'menu_timeout','dialog_timeout','options_timeout','save_timeout','existing_dialog',
+  'controls_unavailable','controls_changed','offscreen','unexpected']);
+const stopped = reason => ({result:'review',reason});
 const unavailable = () => ({ enabled: false, accepted: false });
 function disconnect() {
   const old = port; port = null;
@@ -43,7 +49,7 @@ async function popupStatus() {
   const deadline = Date.now()+1000;
   while (pending && Date.now()<deadline) await new Promise(resolve=>setTimeout(resolve,25));
   const reply = pending ? unavailable() : await native({type:'ping'});
-  return {...reply,setupResult};
+  return {...reply,setupResult,setupReason};
 }
 async function setupScopeIssue(tabId, revision) {
   try {
@@ -73,9 +79,10 @@ async function setupFromPopup(tabId) {
   // Acknowledge first so the popup can close; no page action occurs until focus returns.
   const lease = {tabId,windowId:tab.windowId,url:tab.url,preparing:true,cancelled:false,
     expires:Date.now()+3000,revision:null};
-  setupRun=lease; setupResult='starting';
-  lease.completion=runSetup(lease).catch(()=>({result:'review'})).then(reply=>{
+  setupRun=lease; setupResult='starting'; setupReason=null;
+  lease.completion=runSetup(lease).catch(()=>stopped('connection_lost')).then(reply=>{
     setupResult=reply.result;
+    setupReason=setupReasons.has(reply.reason) ? reply.reason : null;
     return reply;
   }).finally(()=>{if(setupRun===lease)setupRun=null;clear();});
   return {result:'starting'};
@@ -99,16 +106,17 @@ async function runSetup(lease) {
   lease.preparing=false;lease.revision=focusRevision;lease.expires=Date.now()+10000;
   while (pending && Date.now() < lease.expires)
     await new Promise(resolve => setTimeout(resolve, 25));
-  if (Date.now() >= lease.expires || !await setupScope(lease.tabId, lease.revision))
-    return {result:'review'};
+  if (Date.now() >= lease.expires) return stopped('expired');
+  if (!await setupScope(lease.tabId, lease.revision)) return stopped('focus_changed');
   if (!(await native({type:'ping'})).enabled) return {result:'off'};
-  if (!await setupScope(lease.tabId, lease.revision)) return {result:'review'};
+  if (!await setupScope(lease.tabId, lease.revision)) return stopped('focus_changed');
   let timer;
   const reply = await Promise.race([
     chrome.tabs.sendMessage(lease.tabId,{type:'setupAccessibility'},{frameId:0}),
-    new Promise(resolve => { timer=setTimeout(()=>resolve({result:'review'}),10000); }),
+    new Promise(resolve => { timer=setTimeout(()=>resolve(stopped('expired')),10000); }),
   ]).finally(()=>clearTimeout(timer));
-  return {result:['saved','review','unsupported','busy'].includes(reply?.result) ? reply.result : 'review'};
+  const result = ['saved','review','unsupported','busy'].includes(reply?.result) ? reply.result : 'review';
+  return {result,...(result==='review' && setupReasons.has(reply?.reason) ? {reason:reply.reason} : {})};
 }
 async function route(message, sender) {
   if (message?.type === 'status' && sender.url === chrome.runtime.getURL('popup.html')) return popupStatus();
@@ -118,10 +126,17 @@ async function route(message, sender) {
   if (!sender.tab || sender.frameId !== 0 || !docsURL(sender.url)) return unavailable();
   if (message?.type === 'setupGuard') {
     const lease = setupRun;
-    return {allowed:Object.keys(message).length === 1 && !!lease && lease.tabId === sender.tab.id
-      && !lease.preparing && Date.now() < lease.expires && await setupScope(lease.tabId,lease.revision)
-      && setupRun === lease && (await native({type:'ping'})).enabled
-      && setupRun === lease && Date.now() < lease.expires && lease.revision === focusRevision};
+    const denied = reason => ({allowed:false,reason});
+    if (Object.keys(message).length !== 1 || !lease || lease.tabId !== sender.tab.id || lease.preparing)
+      return denied('guard_denied');
+    if (Date.now() >= lease.expires) return denied('expired');
+    if (!await setupScope(lease.tabId,lease.revision) || setupRun !== lease)
+      return denied('focus_changed');
+    const reply = await native({type:'ping'});
+    if (setupRun !== lease || lease.revision !== focusRevision) return denied('focus_changed');
+    if (Date.now() >= lease.expires) return denied('expired');
+    if (!reply.enabled) return denied('off');
+    return {allowed:true};
   }
   if (setupRun) return unavailable();
   const revision = focusRevision;
