@@ -200,3 +200,143 @@ test('the observed Docs window maps raw caret 1020 into its 1037-unit native val
   assert.equal(snapshot.text_selection_utf16,1037);
   assert.equal(snapshot.text_hash,crypto.createHash('sha256').update(nativeValue).digest('hex'));
 });
+
+const popupSender=()=>({url:'chrome-extension://test/popup.html'});
+test('Docs setup requires the popup, an enabled app, and a focused Docs tab',async()=>{
+  const h=harness();let sends=0;
+  h.chrome.tabs.query=async()=>[{id:1,windowId:2,active:true,url}];
+  h.chrome.tabs.sendMessage=async(id,message,options)=>{
+    sends++;assert.equal(id,1);assert.equal(message.type,'setupAccessibility');assert.equal(options.frameId,0);
+    assert.equal((await h.context.route({type:'setupGuard'},sender())).allowed,true);
+    return {result:'saved'};
+  };
+  assert.equal((await h.context.route({type:'setup'},sender())).accepted,false);
+  assert.equal((await h.context.route({type:'setup',extra:'untrusted'},popupSender())).accepted,false);
+  h.setFocused(false);
+  assert.equal((await h.context.route({type:'setup'},popupSender())).result,'not_docs');
+  assert.equal(sends,0);
+  h.setFocused(true);
+  assert.equal((await h.context.route({type:'setup'},popupSender())).result,'saved');
+  assert.equal(sends,1);
+  assert.equal((await h.context.route({type:'setupGuard'},sender())).allowed,false);
+  assert.equal(h.messages.some(m=>!['ping','clear'].includes(m.type)),false);
+});
+test('setup leases reject changed focus, unrelated tabs, and overlapping requests',async()=>{
+  const h=harness();let finish;
+  h.chrome.tabs.query=async()=>[{id:1,windowId:2,active:true,url}];
+  h.chrome.tabs.sendMessage=()=>new Promise(resolve=>{finish=resolve});
+  const request=h.context.route({type:'setup'},popupSender());
+  while(!finish) await new Promise(resolve=>setImmediate(resolve));
+  assert.equal((await h.context.route({type:'setup'},popupSender())).result,'busy');
+  assert.equal((await h.context.route({type:'setupGuard'},{...sender(),tab:{id:3}})).allowed,false);
+  assert.equal((await h.context.route(sample(),sender())).accepted,false);
+  h.chrome.tabs.onActivated.listeners.forEach(fn=>fn({tabId:3}));
+  assert.equal((await h.context.route({type:'setupGuard'},sender())).allowed,false);
+  finish({result:'review'});
+  assert.equal((await request).result,'review');
+});
+test('a disabled local app cannot initiate document setup',async()=>{
+  const h=harness({automaticReplies:false});let sends=0;
+  h.chrome.tabs.query=async()=>[{id:1,windowId:2,active:true,url}];
+  h.chrome.tabs.sendMessage=async()=>{sends++;return {result:'saved'}};
+  h.context.native=async()=>({enabled:false,accepted:false});
+  assert.equal((await h.context.route({type:'setup'},popupSender())).result,'off');
+  assert.equal(sends,0);
+});
+
+function setupHarness(initial={}) {
+  const state={reader:false,braille:false,collaborators:true,magnifier:false,menu:false,dialog:false,
+    allowed:true,visible:true,clicks:[],...initial};
+  let listener;
+  const element=(name,shown,click)=>({
+    name,isConnected:true,disabled:false,textContent:name,
+    getBoundingClientRect:()=>({width:shown()?100:0,height:shown()?20:0}),
+    getAttribute:attribute=>attribute==='aria-disabled'?'false':null,
+    dispatchEvent(){},click(){state.clicks.push(name);click?.();},
+  });
+  const tools=element('Tools',()=>true,()=>{state.menu=true});
+  const item=element('Accessibility',()=>state.menu,()=>{state.menu=false;state.dialog=true});
+  const label=element('Accessibility',()=>state.menu);label.closest=()=>item;
+  const heading={textContent:'Accessibility settings'};
+  function input(key,label) {
+    const box=element(label,()=>state.dialog,()=>{state[key]=!state[key];state.afterClick?.(key)});
+    box.labels=[{textContent:label}];
+    Object.defineProperty(box,'checked',{get:()=>state[key]});
+    if(key==='braille') Object.defineProperty(box,'disabled',{get:()=>!state.reader});
+    return box;
+  }
+  const reader=input('reader','Turn on screen reader support');
+  const braille=input('braille','Turn on braille support');
+  const collaborators=input('collaborators','Turn on collaborator announcements');
+  const magnifier=input('magnifier','Turn on screen magnifier support');
+  const inputs=()=>[reader,...(state.missingBraille?[]:[braille]),collaborators,magnifier];
+  const ok=element('OK',()=>state.dialog,()=>{state.saved=true;state.dialog=false});
+  const dialog=element('dialog',()=>state.dialog);
+  dialog.getAttribute=attribute=>attribute==='aria-labelledby'?'heading':null;
+  dialog.querySelectorAll=selector=>selector==='input[type="checkbox"]'?inputs():selector==='button,[role="button"]'?[ok]:[];
+  const document={get visibilityState(){return state.visible?'visible':'hidden'},
+    getElementById:id=>id==='docs-tools-menu'?tools:id==='heading'?heading:null,
+    querySelectorAll:selector=>selector==='[role="dialog"]'?[dialog]:selector==='.goog-menuitem-label'?[label]:[]};
+  const context=vm.createContext({document,window:{},location:{href:url},Date,setTimeout,
+    MouseEvent:class{},getComputedStyle:()=>({visibility:'visible'}),
+    chrome:{runtime:{id:'test',onMessage:{addListener:fn=>{listener=fn}},
+      sendMessage:async message=>{assert.equal(message.type,'setupGuard');return {allowed:state.allowed};}}}});
+  vm.runInContext(fs.readFileSync(path.join(root,'setup.js'),'utf8'),context);
+  const invoke=(message={type:'setupAccessibility'},sender={id:'test'})=>new Promise(resolve=>{
+    let answered=false;
+    const asynchronous=listener(message,sender,result=>{answered=true;resolve(result)});
+    if(!asynchronous&&!answered)resolve(undefined);
+  });
+  return {state,invoke};
+}
+test('explicit setup enables only missing required options and saves once',async()=>{
+  for(const initial of [{},{reader:true},{reader:true,braille:true},{collaborators:false,magnifier:true}]) {
+    const h=setupHarness(initial);
+    assert.equal((await h.invoke()).result,'saved');
+    assert.equal(h.state.reader,true);assert.equal(h.state.braille,true);
+    assert.equal(h.state.collaborators,initial.collaborators??true);assert.equal(h.state.magnifier,initial.magnifier??false);
+    assert.equal(h.state.clicks.filter(x=>x==='OK').length,1);
+    assert.equal(h.state.clicks.includes('Turn on screen reader support'),!initial.reader);
+    assert.equal(h.state.clicks.includes('Turn on braille support'),!initial.braille);
+  }
+});
+test('setup refuses unrelated senders, extra payloads, pre-existing dialogs and missing controls',async()=>{
+  for(const [message,sender] of [[{type:'setupAccessibility'},{id:'another'}],
+    [{type:'setupAccessibility'},{id:'test',tab:{id:1}}],
+    [{type:'setupAccessibility',text:'must not use'},{id:'test'}]]) {
+    const h=setupHarness();assert.equal(await h.invoke(message,sender),undefined);assert.deepEqual(h.state.clicks,[]);
+  }
+  for(const initial of [{dialog:true},{missingBraille:true},{allowed:false},{visible:false}]) {
+    const h=setupHarness(initial);assert.equal((await h.invoke()).result,'review');
+    assert.equal(h.state.saved,undefined);assert.equal(h.state.reader,false);assert.equal(h.state.braille,false);
+  }
+});
+test('setup stops without saving if focus or unrelated preferences change during the operation',async()=>{
+  for(const disrupt of [state=>{state.allowed=false},state=>{state.collaborators=false}]) {
+    const h=setupHarness();h.state.afterClick=key=>{if(key==='reader')disrupt(h.state)};
+    assert.equal((await h.invoke()).result,'review');
+    assert.equal(h.state.clicks.includes('OK'),false);
+    assert.equal(h.state.braille,false);
+  }
+});
+test('popup availability waits for an in-flight geometry request instead of reporting Off',async()=>{
+  const h=harness({automaticReplies:false});
+  const first=h.context.native({type:'ping'});
+  const status=h.context.route({type:'status'},popupSender());
+  const port=h.ports[0];port.onMessage.listeners.forEach(fn=>fn({enabled:true,accepted:false}));
+  await first;
+  const deadline=Date.now()+2000;
+  while(h.messages.length<2) {assert.ok(Date.now()<deadline);await new Promise(resolve=>setImmediate(resolve));}
+  port.onMessage.listeners.forEach(fn=>fn({enabled:true,accepted:false}));
+  assert.equal((await status).enabled,true);
+});
+test('turning the companion off revokes an active setup lease',async()=>{
+  const h=harness();
+  h.chrome.tabs.query=async()=>[{id:1,windowId:2,active:true,url}];
+  h.chrome.tabs.sendMessage=async()=>{
+    h.context.native=async()=>({enabled:false,accepted:false});
+    assert.equal((await h.context.route({type:'setupGuard'},sender())).allowed,false);
+    return {result:'review'};
+  };
+  assert.equal((await h.context.route({type:'setup'},popupSender())).result,'review');
+});

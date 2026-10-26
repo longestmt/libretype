@@ -312,7 +312,7 @@ def build(identity: str | None, build_number: str | None):
             shutil.copy2(ROOT / "target/release" / DOCS_BINARY, app / "Contents/MacOS" / DOCS_EXECUTABLE)
             companion = resources / "GoogleDocsCompanion"
             companion.mkdir()
-            for name in ("manifest.json", "extension-id.txt", "background.js", "content.js", "popup.html", "popup.js"):
+            for name in ("manifest.json", "extension-id.txt", "background.js", "content.js", "setup.js", "popup.html", "popup.js"):
                 shutil.copy2(ROOT / "companion/google-docs" / name, companion / name)
             shutil.copy2(ROOT / "LICENSE", companion / "LICENSE.txt")
             shutil.copy2(ROOT / "COPYRIGHT", companion / "COPYRIGHT")

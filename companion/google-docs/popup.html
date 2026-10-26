@@ -2,9 +2,13 @@
 <!-- SPDX-License-Identifier: GPL-3.0-only -->
 <meta charset="utf-8">
 <title>LibreType for Google Docs</title>
-<style>body{width:300px;padding:16px;font:14px system-ui;line-height:1.5}h1{font-size:18px}#status{font-weight:600}</style>
+<style>body{width:320px;padding:16px;font:14px system-ui;line-height:1.5}h1{font-size:18px}#status{font-weight:600}button{font:inherit;padding:7px 12px}#result{min-height:1.5em}</style>
 <h1>LibreType for Google Docs</h1>
 <p id="status">Checking the local app…</p>
-<p>Open LibreType and enable its optional Google Docs companion. In Docs, turn on screen reader and braille support under Tools → Accessibility.</p>
+<p>Open LibreType and enable its optional Google Docs companion.</p>
+<p>In the current Google Doc, this button turns on screen reader and braille support. Other accessibility options stay unchanged. Setup currently recognizes English menus.</p>
+<button id="setup" disabled>Enable Docs accessibility</button>
+<p id="result" role="status" aria-live="polite"></p>
+<details><summary>Manual setup</summary><p>In Docs, choose Tools → Accessibility. Check “Turn on screen reader support” and “Turn on braille support”, then click OK.</p></details>
 <p>This companion sends caret geometry and text fingerprints to LibreType on this Mac. It does not send document text or edit documents. Disable it in LibreType or remove this extension at any time.</p>
 <script src="popup.js"></script>

@@ -6,6 +6,7 @@ let pending = null;
 let sourceTab = null;
 let needsClear = false;
 let focusRevision = 0;
+let setupRun = null;
 const unavailable = () => ({ enabled: false, accepted: false });
 function disconnect() {
   const old = port; port = null;
@@ -37,9 +38,56 @@ function docsURL(value) {
     && /^\/document\/d\/[A-Za-z0-9_-]{10,200}\/edit$/.test(u.pathname); }
   catch { return false; }
 }
+async function popupStatus() {
+  const deadline = Date.now()+1000;
+  while (pending && Date.now()<deadline) await new Promise(resolve=>setTimeout(resolve,25));
+  return pending ? unavailable() : native({type:'ping'});
+}
+async function setupScope(tabId, revision) {
+  const tab = await chrome.tabs.get(tabId);
+  const window = await chrome.windows.get(tab.windowId);
+  return revision === focusRevision && tab.active && window.focused && docsURL(tab.url);
+}
+async function setupFromPopup() {
+  if (setupRun) return {result:'busy'};
+  const revision = focusRevision;
+  const tabs = await chrome.tabs.query({active:true,lastFocusedWindow:true});
+  if (tabs.length !== 1 || !docsURL(tabs[0].url)
+    || !await setupScope(tabs[0].id, revision)) return {result:'not_docs'};
+  if (setupRun) return {result:'busy'};
+  // Drop old geometry and prevent normal content ticks from racing setup.
+  clear();
+  const lease = {tabId:tabs[0].id,revision:focusRevision,expires:Date.now()+10000};
+  setupRun = lease;
+  try {
+    while (pending && Date.now() < lease.expires)
+      await new Promise(resolve => setTimeout(resolve, 25));
+    if (Date.now() >= lease.expires || !await setupScope(lease.tabId, lease.revision))
+      return {result:'review'};
+    if (!(await native({type:'ping'})).enabled) return {result:'off'};
+    if (!await setupScope(lease.tabId, lease.revision)) return {result:'review'};
+    let timer;
+    const reply = await Promise.race([
+      chrome.tabs.sendMessage(lease.tabId,{type:'setupAccessibility'},{frameId:0}),
+      new Promise(resolve => { timer=setTimeout(()=>resolve({result:'review'}),10000); }),
+    ]).finally(()=>clearTimeout(timer));
+    return {result:['saved','review','unsupported','busy'].includes(reply?.result) ? reply.result : 'review'};
+  } catch { return {result:'review'}; }
+  finally { if (setupRun === lease) setupRun=null; clear(); }
+}
 async function route(message, sender) {
-  if (message?.type === 'status' && sender.url === chrome.runtime.getURL('popup.html')) return native({type:'ping'});
+  if (message?.type === 'status' && sender.url === chrome.runtime.getURL('popup.html')) return popupStatus();
+  if (message?.type === 'setup' && sender.url === chrome.runtime.getURL('popup.html')
+    && Object.keys(message).length === 1) return setupFromPopup();
   if (!sender.tab || sender.frameId !== 0 || !docsURL(sender.url)) return unavailable();
+  if (message?.type === 'setupGuard') {
+    const lease = setupRun;
+    return {allowed:Object.keys(message).length === 1 && !!lease && lease.tabId === sender.tab.id
+      && Date.now() < lease.expires && await setupScope(lease.tabId,lease.revision)
+      && setupRun === lease && (await native({type:'ping'})).enabled
+      && setupRun === lease && Date.now() < lease.expires && lease.revision === focusRevision};
+  }
+  if (setupRun) return unavailable();
   const revision = focusRevision;
   const tab = await chrome.tabs.get(sender.tab.id);
   const window = await chrome.windows.get(tab.windowId);

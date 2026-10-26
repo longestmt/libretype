@@ -28,6 +28,34 @@ Disable the setting in LibreType to stop using companion geometry. Removing the
 Chrome extension also stops the connection. This does not change your Docs
 accessibility settings, which may also be used by other assistive software.
 
+
+## Setup helper under validation
+
+Companion 0.1.4 adds an **Enable Docs accessibility** button in its popup. This
+candidate has passed automated and disposable-browser checks but has not yet
+been installed or verified against live Docs. The installed 0.1.3 companion
+continues to use the manual steps above.
+
+The button requires the local companion to be enabled and the current Chrome
+window to contain an active Google Doc. It opens Tools → Accessibility, enables
+screen reader and braille support only if needed, verifies the other checkbox
+states have not changed, and saves. It does not run automatically, edit document
+content, send document text, or request additional extension permissions.
+
+The candidate recognizes English menu and checkbox labels. Unrecognized controls,
+a pre-existing dialog, a focus/navigation change, or an unrelated option change
+stop the operation. If it stops after opening the dialog, review or cancel that
+dialog before retrying; partially changed controls are not automatically saved.
+The popup retains manual instructions for unsupported layouts or languages.
+
+Tests exercise message-origin restrictions, active-tab checks, opt-out during
+setup, overlapping requests and preservation. A real-browser fixture verified enabling the
+two required options, leaving already-enabled options alone, and stopping without
+saving after a simulated focus change, unrelated-option change, or pre-existing
+dialog. These are synthetic tests of the implementation, not a live Google Docs
+compatibility claim. The selectors were inspected in the disposable document's
+current settings dialog; its existing preferences were left unchanged.
+
 ## Data and boundaries
 
 The extension sends viewport, editor and caret rectangles, native and value-string
