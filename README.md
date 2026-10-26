@@ -3,10 +3,11 @@
 A macOS typing assistant written in Rust, with local suggestions through a
 separately installed Ollama service. No subscription, account or usage quota.
 
-**1.0 release candidate:** features are frozen. Packaging and final acceptance
-are in progress; this is not yet a published stable release. See the
-[1.0 checklist](docs/RELEASE_1_0.md) for the remaining release work.
-Candidate setup and platform limits are in [installation notes](docs/INSTALLING.md).
+**Version 1.0:** a source-first release for Apple-silicon Macs. The optional
+prebuilt app is ad-hoc signed and not notarized. Download the app and matching
+[complete source](https://github.com/longestmt/libretype/releases/tag/v1.0.0)
+together with their checksums. See [installation notes](docs/INSTALLING.md)
+and the [release checklist](docs/RELEASE_1_0.md).
 
 ## Features
 
@@ -127,7 +128,8 @@ without warranty. See [LICENSE](LICENSE), [COPYRIGHT](COPYRIGHT), and
 own licenses; model licenses do not become the application's license.
 
 [Release instructions](docs/RELEASING.md) cover matching source delivery, notices,
-and outstanding release gates. No public release or source URL is configured yet.
+and source-delivery requirements. Matching source is provided alongside the
+binary on the [versioned release page](https://github.com/longestmt/libretype/releases/tag/v1.0.0).
 The repository intentionally excludes local research, backups, captures, compiled
 apps, model files and generated release archives. Required source/build inputs
 must remain in the reviewed public file list.

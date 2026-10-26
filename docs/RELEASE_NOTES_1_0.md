@@ -1,62 +1,59 @@
-# LibreType 1.0 release candidate — build 66
+# LibreType 1.0.0
 
-Draft for a source-first developer release. Not yet published or promoted to
-stable. Application version: 1.0.0; candidate build: 66; source revision:
-`0bcb1b1bd924ef24dfa70e9d7f508d96d20a6d22`.
+A source-first macOS typing assistant with local suggestions through a separately
+installed Ollama service. No subscription, account or usage quota.
 
-LibreType provides local writing suggestions on macOS through a separately
-installed Ollama service. It has no subscription or account requirement.
+Application version **1.0.0**, build **67**. This release keeps build 66's verified
+typing engine and adds the final source location, visible companion license
+notice, and release/provenance documentation. Companion 0.1.10 changes the popup
+notice only; its completion/setup scripts are unchanged from tested 0.1.9.
 
-## Included
+## Downloads and corresponding source
 
-- Inline suggestions with Tab word acceptance and Shift-Tab full acceptance.
-- Mid-line previews, dismissal, manual activation and pause/resume.
-- Writing instructions and exclusions scoped to apps and websites.
-- Spelling, emoji shortcodes, alternatives, synonyms and accepted-word counts.
-- Local model selection and optional clipboard/screen context.
-- Optional experimental Google Docs companion and encrypted personalization.
+- **[Complete corresponding source](https://github.com/longestmt/libretype/releases/download/v1.0.0/libretype-1.0.0-source.tar.gz)** — application, locked dependencies, matching Rust runtime source, build/install tooling, tests and notices.
+- **[Apple-silicon app](https://github.com/longestmt/libretype/releases/download/v1.0.0/LibreType-1.0.0-macos-arm64.zip)** — ad-hoc signed; **not Developer ID signed or notarized**.
+- **[SHA-256 checksums](https://github.com/longestmt/libretype/releases/download/v1.0.0/SHA256SUMS.txt)** — verify downloads from this trusted release.
 
-## Artifacts
+The complete-source archive is supplied at no charge alongside the binary.
+GitHub's automatically generated source snapshots do not include the vendored
+build inputs; use the complete-source asset above to reproduce this release.
+The compiler version is recorded in `RELEASE.json`. Ollama and model weights are
+installed separately and retain their own terms.
 
-The complete-source archive is the primary download:
-`libretype-1.0.0-candidate-build66-source.tar.gz`. It includes locked dependency
-source, matching Rust runtime source, build tooling and notices. Use the
-toolchain recorded in `RELEASE.json`; Ollama and model weights are separate.
+Application-owned source and documentation are **GPL-3.0-only**, without warranty.
+Third-party materials retain their licenses and attribution. Full license and
+notices are included in the app and source archive. See
+[GPL delivery review](https://github.com/longestmt/libretype/blob/v1.0.0/docs/GPL_COMPLIANCE.md)
+and [installation instructions](https://github.com/longestmt/libretype/blob/v1.0.0/docs/INSTALLING.md).
 
-The optional `LibreType-1.0.0-candidate-build66-macos-arm64.zip` contains the
-Apple-silicon app. It is ad-hoc signed, **not Developer ID signed or notarized**.
-macOS may block a downloaded copy; downloaded installation has not been verified.
-See the installation notes before using it. No Apple Developer membership is
-required to build this source using the supplied ad-hoc packaging script.
+## Features
 
-Verify downloads against `libretype-1.0.0-candidate-build66-SHA256SUMS.txt` from
-the same trusted release. Application-owned source is GPL-3.0-only; third-party
-materials retain their licenses. Both source and binary downloads must remain
-available together if the binary is published.
+Inline ghost text; Tab word acceptance; Shift-Tab full acceptance; mid-line
+previews; dismissal and manual activation; pause/resume; app/site instructions
+and exclusions; spelling, emoji, alternatives and synonyms; local model selection;
+optional clipboard/screen context; accepted-word counts. Google Docs support and
+encrypted writing-history personalization are optional and experimental.
 
-## Verification and limits
+## Validation and known limits
 
-The candidate's complete-source archive rebuilt and passed tests offline with
-an empty Cargo cache. Rust, packaging and companion tests passed, as did notice
-and ad-hoc signature verification. Rebuilding is not byte-for-byte reproducible.
-The installed candidate passed the user-run native Chrome check for display,
-word/full acceptance, dismissal, normal Tab navigation and pause/resume.
+Build 66 passed the user-run native Chrome checks for display, word/full
+acceptance, dismissal, normal Tab navigation and pause/resume. The optional
+Docs companion also passed display/insertion after a document reload following
+its extension update. The final release's changes concern legal notices and
+source delivery, not typing behavior. Offline source validation and packaged
+notice checks are recorded with the release verification results.
 
-Compatibility depends on accessible editor text and caret geometry. Previously
-tested basic flows include TextEdit, Signal, Gmail, Discord, Chrome, Safari and
-VSCodium; support for every field or editor is not claimed. The app declares
-macOS 13 or later, with screen context requiring macOS 14 or later. Intel and
-clean-machine installation are unverified.
+Basic workflows have been exercised in TextEdit, Signal, Gmail, Discord, Chrome,
+Safari and VSCodium. Compatibility depends on accessible editor text and caret
+geometry; not every field or layout is supported. The app declares macOS 13+;
+screen context requires macOS 14+. The supplied binary is arm64 only. Intel,
+clean-machine/downloaded-app installation and actual logout/login startup remain
+unverified. macOS may block the downloaded ad-hoc app; see the installation notes.
 
-Personalization is experimental and off by default; inferred names, spelling and
-sign-offs can be inconsistent. Google Docs is an optional experimental Chrome
-integration with limited layout coverage. Build 66 and companion 0.1.9 passed
-the final basic display/insertion check after the document was reloaded following
-the extension update. Unverified terminal/editor integrations remain experimental.
-Login-launch verification and ordinary-use feedback are also pending. These
-notes must be updated with their actual outcomes before promoting the candidate
-to stable.
+Personalization can infer names, spelling and sign-offs inconsistently. Docs has
+limited layout coverage. Other unverified editor/terminal integrations remain
+experimental. Broader ordinary-use feedback continues after release.
 
-Updates to ad-hoc builds can require renewed Accessibility approval. The
-installer retains the prior app, but does not back up settings/history. See the
-documented data-compatibility limits before downgrading.
+An ad-hoc update may require renewed Accessibility approval. The installer
+preserves the previous app, but does not back up settings/history. Review data
+compatibility before downgrading. Reload Docs tabs after reloading the companion.

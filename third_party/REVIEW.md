@@ -9,14 +9,16 @@ data notices and the exact installed Rust standard-library copyright report
 are included. Apple system frameworks and dynamic system libcurl are not
 redistributed by this source tree.
 
-## Remaining release review
+## Application provenance review
 
-Confirm rights/contributor authority for application-owned contributions.
-The retained copyright attribution does not assert exclusive human authorship
-of every generated line. Preserve original development records privately.
-A complete notice inventory is not a determination of rights to distribute;
-public release still requires this review and the delivery checks in
-[release instructions](../docs/RELEASING.md).
+The owner has directed GPLv3 licensing and release. The factual development
+chronology, included licensed material and limits of the available authorship
+evidence are recorded in [source provenance](../docs/PROVENANCE.md). The retained
+copyright attribution does not assert exclusive human authorship of generated
+code or legal clearance for unrelated contractual, patent or trademark matters.
+Original development records remain private. The technical notice review has
+no unresolved exact-version notice gaps; final distribution must still satisfy
+the source, notice and delivery checks in [release instructions](../docs/RELEASING.md).
 
 ## Replaced dependencies
 

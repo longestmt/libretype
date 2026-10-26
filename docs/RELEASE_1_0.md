@@ -1,111 +1,54 @@
-# LibreType 1.0 release checklist
+# LibreType 1.0 release record
 
-Feature freeze accepted on 2026-10-26. Only release documentation, packaging and
-fixes for defects in the frozen workflows belong in this milestone. A failing
-check must identify a concrete defect; it does not reopen general feature work.
+The owner froze features on 2026-10-26 and then set the release objective:
+release version 1.0 on GitHub with GPLv3 requirements met. The publication target
+is `longestmt/libretype`, tag `v1.0.0`, version 1.0.0, build 67. No further feature
+work belongs in this release.
 
-## Frozen scope
+## Release checks
 
-Ship the existing ghost-text display, word/full acceptance, mid-line preview,
-dismissal, manual activation, instructions, exclusions, shortcuts, spelling,
-emoji, alternatives, model selection, local context and statistics. Compatibility
-claims remain limited to the tested workflows in [STATUS.md](STATUS.md).
+- [x] Verified typing candidate: build 66 passed the user-run Chrome checks for
+  display, word/full acceptance, Esc dismissal, Tab navigation and pause/resume.
+- [x] Docs candidate: build 66 / companion 0.1.9 passed display and Shift-Tab
+  insertion after the document was reloaded following the extension update.
+  Native diagnostics matched text/caret geometry and verified insertion.
+- [x] Experimental features and unverified integration/platform limits are
+  disclosed. No cross-Mac synchronization is included.
+- [x] Exact-version dependency notices, GPL identifiers, source provenance,
+  contributor attribution and separate model terms reviewed. See
+  [GPL compliance](GPL_COMPLIANCE.md) and [provenance](PROVENANCE.md).
+- [x] App source location and companion license/warranty notice prepared.
+- [ ] Build and sign build 67, export its exact complete source, and verify the
+  final archive offline with empty Cargo cache, required tests and notice checks.
+- [ ] Stage the exact final app, complete source and checksums at `v1.0.0`.
+- [ ] Publish the reviewed source/release on GitHub and verify equivalent public
+  access and checksums for the binary and corresponding source.
 
-Personalization remains optional, off by default and experimental. Its known
-name extraction, spelling and sign-off inconsistencies are documented rather
-than release blockers. Google Docs remains an optional experimental Chrome
-companion. Unverified terminal/editor integrations carry no support guarantee.
-New adapters, model/prompt experiments, wider layout coverage and additional
-performance studies belong after 1.0. Cross-Mac synchronization is out of scope.
+## Distribution choice
 
-## Candidate acceptance
+The owner has no Apple Developer account. This is a source-first release with an
+optional ad-hoc signed binary; Developer ID signing/notarization is not a release
+requirement. Its downloaded-installation limits are disclosed. The license and
+source build/install scripts permit modified builds without a private signing
+key, license server or application usage restriction.
 
-- [x] Freeze scope and label experimental capabilities in documentation/settings.
-- [x] Package the final candidate and its matching complete-source archive;
-  verify offline compilation/tests, notices, source manifest and signature.
-- [x] Install build 66 at `~/Applications/LibreType.app`, retaining rollback;
-  verify startup, model discovery and a local preview completion.
-- [x] Renew macOS Accessibility approval and verify the keyboard listener.
-- [x] Run one short native acceptance pass: ghost text, Tab, Shift-Tab, Esc,
-  normal Tab without a suggestion, and pause/resume in a disposable editor.
-- [x] Inspect the changed settings labels for clipping.
-- [x] If the optional Docs companion is enabled, check its final packaged version in the disposable
-  document; do not expand this into another compatibility survey.
-- [x] Document first-run instructions and untested OS/hardware limits in
-  [installation notes](INSTALLING.md).
-- [ ] Verify launch-at-login behavior; do not claim a clean-machine test based
-  on an existing development installation.
-- [ ] Complete 1–2 days of ordinary-use feedback with no known unresolved
-  crash, unintended insertion, privacy-boundary failure or core typing regression.
+No clean-machine, actual login-launch or broad ordinary-use verification is
+claimed. These known coverage limits remain visible in the release notes; they
+are not new feature or release gates for the owner's requested 1.0 publication.
+No known failure of the verified core typing workflows is being waived.
 
-The candidate uses application version `1.0.0` with a distinct build number.
-Until acceptance and distribution checks pass it is a **release candidate**,
-not a stable release. The numeric bundle version alone is not release approval.
+## Candidate evidence retained
 
-Candidate build 66 uses source revision
-`0bcb1b1bd924ef24dfa70e9d7f508d96d20a6d22`. Its 12,849 archive hashes and 279
-public-source files matched; empty-cache offline compilation, Rust tests (209
-library / 250 application, with overlap), 18 packaging tests, 39 companion tests
-and notice/signature checks passed. The exported app retained 145 notice files.
-The local archive and zip checksums are:
+Build 66 was compiled from `0bcb1b1bd924ef24dfa70e9d7f508d96d20a6d22`.
+Its complete-source archive passed 12,849 manifest hash checks, matching all 279
+public files at that revision, and rebuilt offline. Rust suites passed 209 library
+and 250 application tests (with overlap); 18 packaging and 39 companion tests
+passed. The rebuilt bundle verified its ad-hoc signature and 145 notice files.
+This established buildability, not bit-for-bit reproducibility.
 
-```text
-a8f1891cbcac3aa44c7c8834db6c726e707e139e4650cd3e5977d78497a92a2b  libretype-1.0.0-candidate-build66-source.tar.gz
-964aa2376f0a0ff5fd40883c5c25078dbc3c4c1932655e934f64adbc02d4f088  LibreType-1.0.0-candidate-build66-macos-arm64.zip
-```
-
-The installation retained build 64 as rollback. App data files were byte-unchanged
-after startup; history stayed off and locked. The preview produced a completion,
-and both experimental labels fit their windows. Renewed Accessibility approval
-and the keyboard listener are now active in the running build 66 process. The user
-confirmed all five checks on the disposable Chrome acceptance page: ghost-text
-display, Tab and Shift-Tab insertion, sustained Esc dismissal, normal Tab focus
-navigation after dismissal, and pause/resume. The subsequent live health snapshot
-also reported insertion verified in the editor. This is a user-confirmed native
-acceptance pass, not an independently recorded trace of every shortcut. Offline rebuilding
-does not establish bit-for-bit reproducibility. These results were recorded
-after packaging, so the archive contains the checklist as it stood at its source
-revision. Nothing has been published.
-
-A follow-up delivery audit verified that all 180 files in the candidate app zip
-match the installed bundle, both published-format checksum entries match their
-local artifacts, and the installed ad-hoc signature verifies. The current Git
-tree contains exactly the 280 files admitted by the source/documentation manifest,
-with no tracked files outside it. The publication-name check passed for the
-current tree and reachable commit messages, changed lines and historical paths.
-These checks do not replace contributor review or verification after upload.
-
-The final build 66 / companion 0.1.9 Docs check passed after reloading the
-document following the extension reload. The initial attempt had an invalidated
-content-script context; the native bridge was enabled. After the page reload,
-the user confirmed display and Shift-Tab insertion, and native diagnostics
-reported matched text/caret geometry and verified insertion of 10 UTF-16 units.
-No executable, extension or permission changes were required. This verifies
-basic insertion in the disposable document, not every Docs layout or setup flow.
-
-## Distribution
-
-- [x] Push the reviewed source to the private `release/1.0-candidate` branch
-  and stage a private draft prerelease, `v1.0.0-rc.1`, targeting the candidate's
-  exact source revision. The app zip, complete-source archive and checksum file
-  were downloaded back from the draft and matched their local hashes and GitHub
-  asset digests. The repository remains private and the release unpublished.
-- [ ] Finish the contributor/provenance review recorded in
-  [third-party review](../third_party/REVIEW.md).
-- [x] Prepare the source/developer distribution path. The maintainer has no Apple
-  Developer account; acquiring one is not a 1.0 requirement. Source builds and
-  the verified ad-hoc candidate are the available artifacts. The prebuilt app is
-  not Developer ID signed or notarized, and its download installation remains
-  unverified. Installation notes state these limits. Signing/notarization can
-  be added later if credentials become available.
-- [ ] Publish the approved binary and matching source, checksums and concise
-  installation/known-limit notes; verify the downloads. Follow
-  [RELEASING.md](RELEASING.md). A private commit or local archive is not publication.
-
-The [candidate release notes](RELEASE_NOTES_1_0.md) are attached to the private draft. This
-distribution choice does not mark the remaining acceptance or publication items
-complete and does not authorize changing the repository's visibility.
-
-Final candidate acceptance and publication are the remaining milestone work.
-Experimental feature improvements do not become new release gates unless they
-cause a crash, unsafe edit or privacy failure in the shipping application.
+The private candidate draft includes its app, source and checksum assets. All
+three were downloaded back and matched local hashes and GitHub asset digests.
+The current source/release branch carries subsequent documentation and legal UI
+changes; those changes require a new final archive, rather than relabeling the
+candidate archive as matching build 67. Candidate evidence remains private/local
+or in the unpublished candidate draft; it is not a substitute for final assets.

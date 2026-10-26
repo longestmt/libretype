@@ -38,9 +38,10 @@ Historical build validation below records evidence, not additional feature gates
    information if GPLv3 section 6 requires it for the distribution arrangement.
    Do not impose extra application restrictions through a model agreement.
 
-Development source is maintained in the private GitHub repository
-`longestmt/libretype`. No public source URL or binary publication is configured.
-No public release is authorized merely by running a build. Signing and
+The release repository is `longestmt/libretype`. The 1.0 release destination is
+https://github.com/longestmt/libretype/releases/tag/v1.0.0, with the complete-source
+archive linked directly beside the binary. Verify equivalent access to both
+after publication. A build alone does not publish its outputs. Signing and
 notarization are separate distribution tasks.
 
 For the 1.0 milestone, prepare a source-first developer release without requiring

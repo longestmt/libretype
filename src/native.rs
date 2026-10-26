@@ -2731,7 +2731,7 @@ extern "C" fn on_licenses(_: &Object, _: Sel, _: id) {
     unsafe {
         let alert: id = msg_send![class!(NSAlert), new];
         let title = ns("LibreType — License and source");
-        let detail = ns("Copyright (c) 2026 LibreTypist contributors. Application code: GNU GPL version 3 only. You may modify and redistribute it under that license. No warranty, including merchantability or fitness for a particular purpose. Third-party components and downloaded models retain their own terms. Open the license files for the full license, dependency notices and source-release instructions. This development build has no public source URL configured.");
+        let detail = ns("Copyright (c) 2026 LibreTypist contributors. Application code: GNU GPL version 3 only. You may modify and redistribute it under that license. No warranty, including merchantability or fitness for a particular purpose. Third-party components and downloaded models retain their own terms. Open the license files for the full license and dependency notices. Matching complete source and build instructions: https://github.com/longestmt/libretype/releases/tag/v1.0.0 (libretype-1.0.0-source.tar.gz).");
         let _: () = msg_send![alert,setMessageText:title];
         let _: () = msg_send![alert,setInformativeText:detail];
         for text in ["Open license files", "Close"] {

@@ -1,5 +1,9 @@
 # Objective-C compatibility source
 
+LibreType modifications dated 2026-10-24: the ownership adapter/dependency change
+and four raw-pointer receiver borrows described below. The original upstream
+license and attribution are retained alongside the modifications' GPLv3 notice.
+
 Base: `objc` 0.2.7 from its crates.io archive. The original MIT license is retained
 in `LICENSE.txt`. Original Rust source files are retained except for the module
 declaration in `src/lib.rs` and four raw-pointer borrows in `src/macros.rs`; no

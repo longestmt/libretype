@@ -1,10 +1,10 @@
-# Installing the 1.0 candidate
+# Installing LibreType 1.0
 
-Build 66 is a local release candidate, not a published stable release. Its binary
+The 1.0 release binary
 is for Apple silicon (`arm64`). The app declares macOS 13 or later; optional screen
 context requires macOS 14 or later. This declaration is not verification on every
 supported OS version. Intel builds and clean-machine installation have not been
-verified for this candidate.
+verified for this release.
 
 ## First run
 
@@ -47,16 +47,16 @@ so Tab can continue to navigate cells.
 
 ## Source/developer distribution
 
-The planned release is source-first; an Apple Developer membership is not a
+The release is source-first; an Apple Developer membership is not a
 prerequisite for building the supplied source with the existing ad-hoc build
 script. Follow [the complete-source build instructions](RELEASING.md#build-from-a-release-source-archive)
 using the compiler version recorded in the archive's `RELEASE.json`.
 
-The optional prebuilt candidate is ad-hoc signed, not Developer ID signed or
+The optional prebuilt app is ad-hoc signed, not Developer ID signed or
 notarized. macOS may block a downloaded copy. If you independently trust its
 source and integrity, Apple's [app-opening guidance](https://support.apple.com/en-us/102445)
 describes the per-app **Privacy & Security → Open Anyway** flow. Availability can
-depend on the warning and device policy. This candidate has not been tested
+depend on the warning and device policy. This release has not been tested
 through that downloaded-app flow; successful local development launch is not
 Gatekeeper approval. A checksum detects changed bytes but does not authenticate
 an untrusted download source.
