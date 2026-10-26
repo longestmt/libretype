@@ -171,8 +171,10 @@ all original settings restored; clipboard context and history remained off.
    MLX 12B model improved some longer-profile conflicts but remained inconsistent
    and used substantially more memory. Optional MLX compatibility is implemented
    and passed synthetic completion, synonyms and profile checks; native editor
-   verification is pending. Build 62 is installed with the selected model and
-   settings unchanged; it awaits launch and renewed Accessibility approval.
+   display and Shift-Tab insertion were user-confirmed in build 62's requested
+   unsent Gmail check. The original model and settings were restored. There was
+   no contemporaneous acceptance trace, so this is not machine-verified edit
+   integrity or a broader editor-compatibility claim.
 2. **Editor coverage.** Extend code-editor policy checks beyond the verified
    VSCodium source editor and Twinny composer to other chat/source surfaces,
    and verify terminal AI prompt/multiplexer layouts. The reported spreadsheet

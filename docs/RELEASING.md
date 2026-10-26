@@ -103,8 +103,11 @@ files. The temporary build was removed afterward. The signed executables were
 not byte-identical to the installed build; this verifies offline buildability,
 not bit-for-bit reproducibility.
 
-Native build 62 verification remains pending. Nothing was published, and the
-contributor, certificate signing and distribution review gates remain open.
+Build 62 subsequently launched with Accessibility and shortcuts active; the
+user confirmed native MLX display and insertion in the requested unsent Gmail
+check. This does not verify a clean-machine installation or signed upgrade
+continuity. Nothing was published, and the contributor, certificate signing
+and distribution review gates remain open.
 
 
 ## References

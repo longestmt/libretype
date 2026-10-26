@@ -327,8 +327,14 @@ varied substantially, including several over ten seconds; concurrent desktop
 work and caches were not controlled. Ollama reported 8,956,851,444 bytes of loaded
 allocation at a 2,048-token context, which is not a total-memory or peak-memory
 measurement. No default or user model selection changed, no new weights were
-downloaded, and no personal writing or history was used. Native editor use with
-MLX remains unverified.
+downloaded, and no personal writing or history was used in these synthetic probes.
+After build 62 installation and Accessibility renewal, the user confirmed ghost
+text and Shift-Tab insertion in the requested unsent Gmail MLX check. The original
+Gemma4 E4B selection and all settings were restored (parsed configuration equality).
+No acceptance transition trace was captured. The later diagnostic reported a
+suffix-change stop with zero verified chunks and cannot be tied to that test;
+the native result is user confirmation, not machine-verified edit integrity.
+History, clipboard context and screen context remained off.
 
 Exact artifacts used:
 
