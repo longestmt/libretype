@@ -284,7 +284,12 @@ follow-up returned a review result and is not counted as a pass. Companion 0.1.8
 adds fixed, text-free interruption and step-timeout reasons. Version 0.1.9 also
 fixes cancellation caused by unrelated background-tab navigation or closure;
 39 synthetic tests pass, including protection of the active document during
-overlapping scope lookups. Live verification of these changes is pending. Browser-restart
+overlapping scope lookups. Build 66 with companion 0.1.9 passed a final native
+display and Shift-Tab insertion check after reloading the document following the
+extension update; diagnostics matched text/caret geometry and verified insertion.
+The preceding failure exposed an invalidated content-script context, with the
+native bridge still enabled. Setup interruption cases retain synthetic coverage;
+they were not all repeated live. Browser-restart
 persistence remains unverified. Selected-text alternatives, emoji/spelling replacements, tables,
 browser zoom and complex layouts are not covered by this support claim.
 Cross-Mac synchronization is outside the project scope.

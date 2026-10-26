@@ -29,7 +29,7 @@ performance studies belong after 1.0. Cross-Mac synchronization is out of scope.
 - [x] Run one short native acceptance pass: ghost text, Tab, Shift-Tab, Esc,
   normal Tab without a suggestion, and pause/resume in a disposable editor.
 - [x] Inspect the changed settings labels for clipping.
-- [ ] If the optional Docs companion is enabled, check its final packaged version in the disposable
+- [x] If the optional Docs companion is enabled, check its final packaged version in the disposable
   document; do not expand this into another compatibility survey.
 - [x] Document first-run instructions and untested OS/hardware limits in
   [installation notes](INSTALLING.md).
@@ -74,6 +74,14 @@ tree contains exactly the 280 files admitted by the source/documentation manifes
 with no tracked files outside it. The publication-name check passed for the
 current tree and reachable commit messages, changed lines and historical paths.
 These checks do not replace contributor review or verification after upload.
+
+The final build 66 / companion 0.1.9 Docs check passed after reloading the
+document following the extension reload. The initial attempt had an invalidated
+content-script context; the native bridge was enabled. After the page reload,
+the user confirmed display and Shift-Tab insertion, and native diagnostics
+reported matched text/caret geometry and verified insertion of 10 UTF-16 units.
+No executable, extension or permission changes were required. This verifies
+basic insertion in the disposable document, not every Docs layout or setup flow.
 
 ## Distribution
 

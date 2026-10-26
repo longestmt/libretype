@@ -50,8 +50,9 @@ clean-machine installation are unverified.
 
 Personalization is experimental and off by default; inferred names, spelling and
 sign-offs can be inconsistent. Google Docs is an optional experimental Chrome
-integration with limited layout coverage; the final companion 0.1.9 live check
-is still pending. Unverified terminal/editor integrations remain experimental.
+integration with limited layout coverage. Build 66 and companion 0.1.9 passed
+the final basic display/insertion check after the document was reloaded following
+the extension update. Unverified terminal/editor integrations remain experimental.
 Login-launch verification and ordinary-use feedback are also pending. These
 notes must be updated with their actual outcomes before promoting the candidate
 to stable.

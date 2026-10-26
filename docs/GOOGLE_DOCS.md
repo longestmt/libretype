@@ -105,7 +105,14 @@ extension in Chrome and then reloading the document. A verified copy of the prio
 standalone package is retained locally. Extension identity, permissions and host
 registration are unchanged. Reloading the extension alone does not require an
 Accessibility reset, but installing the new native candidate does require renewed
-macOS approval. Live verification of 0.1.9 is pending.
+macOS approval. Build 66 and companion 0.1.9 subsequently passed the final basic
+display and Shift-Tab insertion check in the disposable document. The first
+attempt reported no suggestion; the browser showed an invalidated extension
+context while the native bridge remained enabled. Reloading the document after
+the extension update attached a fresh content script. The user then confirmed
+success, and native diagnostics reported matched text/caret geometry and verified
+insertion. No rebuild or permission change was needed. This is not live
+verification of every setup failure reason or background-tab interruption case.
 
 ## Data and boundaries
 
