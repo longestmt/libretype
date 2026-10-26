@@ -63,6 +63,14 @@ does not establish bit-for-bit reproducibility. These results were recorded
 after packaging, so the archive contains the checklist as it stood at its source
 revision. Nothing has been published.
 
+A follow-up delivery audit verified that all 180 files in the candidate app zip
+match the installed bundle, both published-format checksum entries match their
+local artifacts, and the installed ad-hoc signature verifies. The current Git
+tree contains exactly the 280 files admitted by the source/documentation manifest,
+with no tracked files outside it. The publication-name check passed for the
+current tree and reachable commit messages, changed lines and historical paths.
+These checks do not replace contributor review or verification after upload.
+
 ## Distribution
 
 - [ ] Finish the contributor/provenance review recorded in
