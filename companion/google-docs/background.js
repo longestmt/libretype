@@ -43,21 +43,29 @@ async function popupStatus() {
   while (pending && Date.now()<deadline) await new Promise(resolve=>setTimeout(resolve,25));
   return pending ? unavailable() : native({type:'ping'});
 }
-async function setupScope(tabId, revision) {
-  const tab = await chrome.tabs.get(tabId);
-  const window = await chrome.windows.get(tab.windowId);
-  return revision === focusRevision && tab.active && window.focused && docsURL(tab.url);
+async function setupScopeIssue(tabId, revision) {
+  try {
+    const tab = await chrome.tabs.get(tabId);
+    const window = await chrome.windows.get(tab.windowId);
+    if (revision !== focusRevision) return 'focus_changed';
+    if (!tab.active) return 'inactive_tab';
+    if (!window.focused) return 'window_unfocused';
+    if (typeof tab.url !== 'string') return 'unavailable_url';
+    return docsURL(tab.url) ? null : 'not_docs';
+  } catch { return 'tab_unavailable'; }
 }
-async function setupFromPopup() {
+async function setupScope(tabId, revision) {
+  return (await setupScopeIssue(tabId, revision)) === null;
+}
+async function setupFromPopup(tabId) {
   if (setupRun) return {result:'busy'};
   const revision = focusRevision;
-  const tabs = await chrome.tabs.query({active:true,lastFocusedWindow:true});
-  if (tabs.length !== 1 || !docsURL(tabs[0].url)
-    || !await setupScope(tabs[0].id, revision)) return {result:'not_docs'};
+  const issue = await setupScopeIssue(tabId, revision);
+  if (issue) return {result:issue};
   if (setupRun) return {result:'busy'};
   // Drop old geometry and prevent normal content ticks from racing setup.
   clear();
-  const lease = {tabId:tabs[0].id,revision:focusRevision,expires:Date.now()+10000};
+  const lease = {tabId,revision:focusRevision,expires:Date.now()+10000};
   setupRun = lease;
   try {
     while (pending && Date.now() < lease.expires)
@@ -78,7 +86,8 @@ async function setupFromPopup() {
 async function route(message, sender) {
   if (message?.type === 'status' && sender.url === chrome.runtime.getURL('popup.html')) return popupStatus();
   if (message?.type === 'setup' && sender.url === chrome.runtime.getURL('popup.html')
-    && Object.keys(message).length === 1) return setupFromPopup();
+    && Object.keys(message).sort().join(',') === 'tabId,type'
+    && Number.isInteger(message.tabId) && message.tabId >= 0) return setupFromPopup(message.tabId);
   if (!sender.tab || sender.frameId !== 0 || !docsURL(sender.url)) return unavailable();
   if (message?.type === 'setupGuard') {
     const lease = setupRun;

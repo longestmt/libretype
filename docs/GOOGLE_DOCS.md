@@ -31,10 +31,17 @@ accessibility settings, which may also be used by other assistive software.
 
 ## Setup helper under validation
 
-Companion 0.1.4 adds an **Enable Docs accessibility** button in its popup. This
-candidate has passed automated and disposable-browser checks but has not yet
-been installed or verified against live Docs. The installed 0.1.3 companion
-continues to use the manual steps above.
+The candidate companion adds an **Enable Docs accessibility** button in its
+popup. Version 0.1.4 passed automated and disposable-browser checks, but its live
+check reported that no editable Doc was selected even while suggestions worked
+in that document. This is a failed helper check, not a setup success.
+
+Version 0.1.5 resolves the target tab in the popup's own window and passes that
+tab ID to the worker. It retains active-tab, window-focus, URL and change checks,
+and distinguishes those failures in the popup without displaying document
+addresses. Its 24 extension tests and 18 packaging tests pass; a live retest is
+pending. The app-bundled companion remains 0.1.3, while the standalone candidate
+can be loaded independently without replacing or re-signing the app.
 
 The button requires the local companion to be enabled and the current Chrome
 window to contain an active Google Doc. It opens Tools → Accessibility, enables
