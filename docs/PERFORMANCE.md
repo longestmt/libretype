@@ -126,3 +126,22 @@ words, and existing explicit writing instructions. History, clipboard and
 screen context remained off. The native tracker and numeric-only sampler are
 now exercised together; broader latency, battery and controlled resource
 comparisons remain outstanding.
+
+### Generation-phase follow-up
+
+A separate release-mode probe on the same model ran four invented contexts
+(plain continuation, explicit instructions, a partial word and mid-line
+insertion) in three rotated rounds. All 12 requests completed successfully;
+each case returned the same text across its three rounds. Temporary source
+instrumentation measured metadata validation at 9–16 ms. Time to first visible
+content on successful generation paths ranged from 137 to 1,290 ms. Partial-word
+requests first rejected the raw continuation and used the existing structured
+fallback; the first-content range excludes those rejected attempts.
+
+First-round request times were 1.21–1.83 seconds, versus 0.26–1.34 seconds in
+later rounds. Repeated prompts can benefit from cache state; model loading and
+other workloads were not isolated. This does not explain the earlier 7.50-second
+native sample or establish a cold-start penalty. Metadata validation was a small
+part of these requests, so no caching or removal of the local-model check was
+adopted. The installed application and settings were unchanged; temporary tracing
+is not included in application builds.
