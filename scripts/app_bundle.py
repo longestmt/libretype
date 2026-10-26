@@ -272,6 +272,14 @@ def install(source: Path, destination: Path, *, allow_identity_change=False, qui
                 print(f"Previous app retained for recovery at {candidate}", file=sys.stderr)
 
 
+def copy_third_party_notices(source: Path, destination: Path):
+    # Source exports also contain cargo-src and rust-runtime-source here. Those
+    # belong in the corresponding-source archive, not the app's notices folder.
+    destination.mkdir()
+    shutil.copy2(source / "REVIEW.md", destination / "REVIEW.md")
+    shutil.copytree(source / "notices", destination / "notices")
+
+
 def build(identity: str | None, build_number: str | None):
     if identity is not None:
         if not re.fullmatch(r"[0-9A-Fa-f]{40}", identity):
@@ -323,7 +331,7 @@ def build(identity: str | None, build_number: str | None):
             legal.mkdir()
             for name in ("LICENSE", "COPYRIGHT", "THIRD_PARTY_NOTICES.md"):
                 shutil.copy2(ROOT / name, legal / name)
-            shutil.copytree(ROOT / "third_party", legal / "third_party")
+            copy_third_party_notices(ROOT / "third_party", legal / "third_party")
             shutil.copytree(ROOT / "docs", legal / "docs")
             for dependency in ("gemoji", "curl"):
                 dest = legal / "vendor" / dependency

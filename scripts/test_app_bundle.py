@@ -12,6 +12,32 @@ from unittest.mock import patch
 import app_bundle as b
 
 
+class NoticePackagingTests(unittest.TestCase):
+    def test_source_exports_keep_all_reviewed_notices_without_bundling_build_sources(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            source = root / "third_party"
+            retained = {
+                "REVIEW.md": "Review instructions",
+                "notices/inventory.json": "{}",
+                "notices/library/nested/LICENSE": "Nested upstream notice",
+                "notices/rust-runtime/COPYRIGHT": "Runtime attribution",
+            }
+            extra = {
+                "cargo-src/library/src/lib.rs": "Dependency implementation",
+                "rust-runtime-source/library/std/src/lib.rs": "Compiler runtime source",
+            }
+            for name, content in {**retained, **extra}.items():
+                path = source / name
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text(content)
+            destination = root / "bundled"
+            b.copy_third_party_notices(source, destination)
+            actual = {p.relative_to(destination).as_posix(): p.read_text()
+                      for p in destination.rglob("*") if p.is_file()}
+            self.assertEqual(actual, retained)
+
+
 class UpdateTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
