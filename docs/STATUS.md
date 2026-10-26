@@ -21,8 +21,11 @@ cancellation, rejection of a delayed canceled result, an unchanged encrypted
 snapshot, and preservation of a subsequent manual build. A synthetic local-model
 check also observed three canceled calls exit within 3–22 ms, with unchanged vault
 bytes and successful following completions; see [limits](PERFORMANCE.md).
-This change is installed in build 64; native interruption and its effect on model
-latency remain unmeasured.
+A later paired synthetic check found foreground request medians of 0.53 seconds
+after cancellation versus 4.26 seconds with analysis continuing (0.41 seconds
+without analysis), with the same completions and lower delay in all six pairs.
+This change is installed in build 64; interruption through native keyboard input
+and its full typing-to-draw impact remain unmeasured.
 A synthetic lifecycle check with the local Gemma4 E4B model verified
 three encrypted samples, scheduled profile generation, lock/unlock persistence
 and a completion using the restored profile with recording disabled. This used

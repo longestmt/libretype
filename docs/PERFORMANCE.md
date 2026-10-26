@@ -39,6 +39,51 @@ input has not yet been exercised.
 cargo run --release --locked --example profile_interrupt_probe -- gemma4:e4b
 ```
 
+### Paired foreground-contention check
+
+On 2026-10-26, `analysis_contention_probe` compared idle inference with canceled
+and continuing profile analysis on the same MLX artifact above. It used the
+production profile generator, completion pipeline and cancellation epoch, with
+three invented analysis samples and three plain end-of-text completion contexts.
+It accessed no saved writing, Keychain or application configuration and wrote no
+profile to the installed app.
+
+One analysis and all three completion contexts were warmed first. Six rounds
+covered all permutations of the three conditions. Each context was used twice,
+with the cancellation/continuation order reversed. Analysis remained in flight
+after 300 ms in every contention trial. Foreground inference started immediately
+after the cancellation decision, without first waiting for the canceled client
+to exit. Each round used identical foreground text for its three conditions.
+
+| Condition | Foreground median | Observed range | Trials |
+| --- | ---: | ---: | ---: |
+| No background analysis | 0.41 s | 0.39–0.66 s | 6 |
+| Background analysis canceled | 0.53 s | 0.42–0.72 s | 6 |
+| Background analysis allowed to continue | 4.26 s | 3.88–4.68 s | 6 |
+
+Cancellation reduced the foreground request interval in all six paired trials,
+by 3.36–4.04 seconds. Every foreground result was nonempty and identical across
+the three conditions within its round. All six canceled analysis calls reported
+cancellation, exiting 5.73–25.33 ms after the epoch change; all six continuing
+calls produced valid profiles. The model digest and Ollama version were unchanged
+before and after the study. The probe completed 21 foreground calls including
+warmups, seven completed analyses and six canceled analyses, without unexpected
+errors.
+
+This establishes an observed request-latency benefit for the tested contention
+workload. It does not directly measure GPU release time, CPU or battery use,
+model cold starts, or native typing-to-draw latency. The native keyboard event,
+Engine command routing and debounce are not part of this probe; those paths have
+separate tests, and the live automatic-analysis keyboard check remains pending.
+Foreground requests used no attached learned profile or optional context.
+Repeated prompts could benefit from cache state; other desktop workloads and
+server caches were not isolated. These six paired observations are not a general
+latency guarantee for other models, longer documents or personalized completions.
+
+```sh
+cargo run --release --locked --example analysis_contention_probe -- gemma4:e4b
+```
+
 ## Synthetic inference and process resources
 
 On 2026-10-24, a release-mode production-pipeline probe ran four invented
