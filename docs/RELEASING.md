@@ -94,10 +94,17 @@ bundle passed packaging verification and was installed with a backup of build 61
 Archive SHA-256:
 `7c699b449b43a3a22c8c744389676a49250e2333b2edb9628631ca4afdd1b809`.
 
-The changed source passed all-target Rust tests and Clippy before packaging;
-this archive has not received a separate offline rebuild. Native build 62
-verification remains pending. Nothing was published, and the contributor,
-signing and distribution review gates remain open.
+The archive then rebuilt successfully with an empty Cargo cache and Cargo
+network access disabled. All-target Rust tests passed (202 library and 243
+application tests, with overlap), along with 18 packaging tests, 14 companion
+tests and the notice inventory check. A bundle rebuilt from the export passed
+strict signature verification and byte checks for 145 dependency/runtime notice
+files. The temporary build was removed afterward. The signed executables were
+not byte-identical to the installed build; this verifies offline buildability,
+not bit-for-bit reproducibility.
+
+Native build 62 verification remains pending. Nothing was published, and the
+contributor, certificate signing and distribution review gates remain open.
 
 
 ## References

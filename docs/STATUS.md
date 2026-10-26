@@ -200,8 +200,9 @@ all original settings restored; clipboard context and history remained off.
    battery impact or a complete setup experience.
 4. **Release delivery.** The dependency replacements remove the two missing-notice
    issues, and build 49 passed the native insertion check. The build 61 source
-   export rebuilt and passed tests offline with an empty Cargo cache; its rebuilt
-   bundle retained the notices and verified its ad-hoc signature. This does not
+   export rebuilt and passed tests offline with an empty Cargo cache; the build
+   62 export subsequently passed the same validation. Both rebuilt bundles
+   retained the notices and verified their ad-hoc signatures. This does not
    establish bit-for-bit reproducibility or public-release readiness. Complete contributor review
    documented in [release instructions](RELEASING.md), then verify signing,
    upgrade Accessibility continuity, notarization and distribution. These are
