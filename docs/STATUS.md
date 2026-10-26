@@ -10,7 +10,10 @@ their quality/coverage improvements are not 1.0 blockers. See the finite
 
 Build 66 (1.0 release candidate) is now installed. Its complete-source archive
 passed offline rebuilding and tests, and its local preview and settings-label
-layout passed. Accessibility and keyboard access are active; native acceptance is pending.
+layout passed. Accessibility and keyboard access are active. The user confirmed
+build 66's final Chrome checks for display, word/full insertion, dismissal,
+normal Tab navigation and pause/resume; live diagnostics subsequently reported
+verified insertion. These results apply to the disposable editor tested.
 Historical build numbers below describe when earlier checks were performed.
 
 Verified workflows include basic suggestion display/acceptance in the tested

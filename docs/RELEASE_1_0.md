@@ -26,7 +26,7 @@ performance studies belong after 1.0. Cross-Mac synchronization is out of scope.
 - [x] Install build 66 at `~/Applications/LibreType.app`, retaining rollback;
   verify startup, model discovery and a local preview completion.
 - [x] Renew macOS Accessibility approval and verify the keyboard listener.
-- [ ] Run one short native acceptance pass: ghost text, Tab, Shift-Tab, Esc,
+- [x] Run one short native acceptance pass: ghost text, Tab, Shift-Tab, Esc,
   normal Tab without a suggestion, and pause/resume in a disposable editor.
 - [x] Inspect the changed settings labels for clipping.
 - [ ] If the optional Docs companion is enabled, check its final packaged version in the disposable
@@ -57,8 +57,12 @@ a8f1891cbcac3aa44c7c8834db6c726e707e139e4650cd3e5977d78497a92a2b  libretype-1.0.
 The installation retained build 64 as rollback. App data files were byte-unchanged
 after startup; history stayed off and locked. The preview produced a completion,
 and both experimental labels fit their windows. Renewed Accessibility approval
-and the keyboard listener are now active in the running build 66 process. Native
-typing acceptance is pending. Offline rebuilding
+and the keyboard listener are now active in the running build 66 process. The user
+confirmed all five checks on the disposable Chrome acceptance page: ghost-text
+display, Tab and Shift-Tab insertion, sustained Esc dismissal, normal Tab focus
+navigation after dismissal, and pause/resume. The subsequent live health snapshot
+also reported insertion verified in the editor. This is a user-confirmed native
+acceptance pass, not an independently recorded trace of every shortcut. Offline rebuilding
 does not establish bit-for-bit reproducibility. These results were recorded
 after packaging, so the archive contains the checklist as it stood at its source
 revision. Nothing has been published.
