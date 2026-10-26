@@ -79,6 +79,14 @@ key is stored in macOS Keychain and records are encrypted locally. Screen contex
 requires the relevant macOS permission. Secure fields and excluded contexts are
 not eligible. Optional data sources should be enabled only when wanted.
 
+Live screen context requires macOS 14 or later. Use **LT → Additional context… →
+Grant screen access…** to open permission setup. If LibreType is missing from
+**Privacy & Security → Screen & System Audio Recording**, use the **+** button
+under the screen-recording list to add `~/Applications/LibreType.app`, then enable
+it and quit/reopen if macOS requests that. Granting OS permission does not enable
+the feature: its separate **Use text from the active window (local OCR)** option
+must also be selected and saved. See [Apple's permission instructions](https://support.apple.com/guide/mac-help/control-access-screen-system-audio-recording-mchld6aa7d23/mac).
+
 The bundled executable and process are named `LibreType`; the Cargo command-line
 binary is `libretype`. Legacy storage identifiers remain for existing installations:
 the bundle ID is `org.libretypist.app`, settings/history are under
