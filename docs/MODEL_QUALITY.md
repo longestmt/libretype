@@ -219,3 +219,44 @@ were not executed because the override gate failed. All writing was synthetic;
 application history, settings and the installed build were untouched. This
 narrows the next investigation to combining learned conventions with explicit
 instructions, rather than merely extracting more spelling evidence.
+
+### Vocabulary spelling priority
+
+A source review found that the recurring-vocabulary prompt told the model to
+preserve every entry's spelling, even when explicit writing preferences requested
+a different convention. A candidate that distinguished ordinary vocabulary from
+proper names fixed the earlier neighbour conflict, but in a new recipient check
+it replaced the baseline's Leonie with a venue. That candidate was rejected.
+
+The smaller adopted change replaces only the blanket spelling directive with
+“Preserve names and identifiers.” It keeps every learned entry, the existing
+influence strength, scoped instructions and completion format, without adding a
+model request. On Gemma4 E4B it changed the earlier American-spelling case from
+`neighbour` to `neighbor` and preserved the other frozen/expanded controls.
+
+Twenty additional contexts compared the changed prompt with the unchanged
+baseline. Twelve were defined before the first candidate; eight further contexts
+were defined before inspecting the smaller candidate's results. The smaller
+candidate's outputs were identical to baseline across these twenty contexts.
+They retained the tested proper names and compatible person, but a profile that
+explicitly described British spelling still defeated some American-spelling
+requests. Both versions also invented a generic variable name and missed a
+recurring sign-off in the longer vocabulary profile. These are unresolved limits,
+not passing checks or evidence of universal instruction priority. Reference
+insertions in the probe guide manual review; grammatical number, quotation marks
+and optional punctuation can differ without proving a preference failure.
+
+The reproducible additional checks are:
+
+```sh
+cargo run --release --locked --example vocabulary_priority_probe -- gemma4:e4b
+cargo run --release --locked --example vocabulary_priority_probe -- gemma4:e4b fresh
+```
+
+This investigation made 114 synthetic completion requests, including the rejected
+candidate and paired controls. One Inez preservation request returned a local
+transport error; the complete eight-case group was repeated successfully, with
+Inez retained. The failed request remains in the evidence. These are unblinded,
+single-context observations rather than an aggregate accuracy score. No user
+history or application settings were loaded, and the installed app was unchanged.
+The source's deterministic all-target suites and Clippy check passed.
