@@ -178,9 +178,12 @@ all original settings restored; clipboard context and history remained off.
    inventories refresh once a minute. Local HTTP integration tests verify recovery,
    local-only model filtering, malformed replies, response-size and whole-request
    limits; scheduler tests cover backoff, concurrent refresh requests and worker
-   failure. Build 61 is installed; its native startup check is pending launch
-   and renewed Accessibility approval. These checks do not establish actual
-   login launch or a clean-machine installation. Build 58 captured three native typing-to-draw
+   failure. Build 61 is running with Accessibility and keyboard shortcuts active;
+   its live model catalog reports available, and settings are unchanged. Native
+   suggestion display and Shift-Tab insertion passed the user’s unsent-draft
+   check. The user did not identify which of the offered apps was tested. These
+   checks do not establish actual login launch or a clean-machine installation.
+   Build 58 captured three native typing-to-draw
    samples in Chrome: 7.50, 2.08 and 2.10 seconds, dominated by generation.
    See [measurement limits](PERFORMANCE.md). Extend this to controlled workloads
    and combined application/model resource use, then check actual login launch
