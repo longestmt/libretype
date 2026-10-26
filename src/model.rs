@@ -242,8 +242,13 @@ fn generate_prepared(
         request.website.as_deref(),
         request.profile.as_ref(),
     );
-    let prompt = if instructions.trim().is_empty() || personalized {
+    // Personalization must not suppress the final explicit-preference reminder.
+    // Retain the learned entries; their relevance does not override instructions.
+    let explicit = config.instructions_for_context(&request.app_id, request.website.as_deref());
+    let prompt = if explicit.trim().is_empty() {
         prepared.prompt.clone()
+    } else if personalized {
+        format!("{}\nComplete the text in the fewest words that satisfy the explicit writing preferences: {}\nUse learned style and vocabulary only where compatible with those preferences and necessary for this sentence. Add no optional elaboration. Preserve the existing text. Return only the requested output.", prepared.prompt, explicit.trim())
     } else {
         format!(
             "{}\nComplete the text in the fewest words that satisfy all applicable writing preferences. Add no optional elaboration. The insertion must fit the existing sentence grammatically and use at most {} words. Preserve the existing text. Return only the requested output.",
@@ -670,7 +675,7 @@ mod tests {
     }
     #[test]
     fn explicit_preferences_use_templated_insertion_and_resolved_scope() {
-        for scope in 0..5 {
+        for (scope, learned) in (0..5).flat_map(|scope| [false, true].map(|learned| (scope, learned))) {
             let listener = TcpListener::bind("127.0.0.1:0").unwrap();
             let base = format!("http://{}", listener.local_addr().unwrap());
             let mut config = Config::default();
@@ -693,6 +698,15 @@ mod tests {
                     },
                 );
             }
+            if learned {
+                config.history.strength = crate::history::Strength::Strong;
+                request.profile = Some(crate::history::Profile {
+                    revision: 1, created_at: 1,
+                    source_policy: crate::history::profile::source_policy(&config),
+                    guidance: "Concise writing.".into(),
+                    vocabulary: vec!["Ariadne".into()],
+                });
+            }
             std::thread::scope(|threads| {
                 let server = threads.spawn(|| {
                     let (mut socket, _) = listener.accept().unwrap();
@@ -702,7 +716,7 @@ mod tests {
                     let (mut socket, _) = listener.accept().unwrap();
                     let (path, body) = wire_request(&mut socket);
                     assert!(path.starts_with("POST /api/generate "));
-                    assert_eq!(body["raw"], scope == 0);
+                    assert_eq!(body["raw"], scope == 0 && !learned);
                     let prompt = body["prompt"].as_str().unwrap();
                     assert_eq!(prompt.contains("Mention review."), scope == 1 || scope == 3);
                     assert_eq!(
@@ -710,13 +724,18 @@ mod tests {
                         scope == 2 || scope == 3
                     );
                     assert_eq!(prompt.contains("Mention patience."), scope >= 3);
-                    let response = if scope == 0 {
+                    assert_eq!(prompt.contains("Ariadne"), learned);
+                    assert_eq!(prompt.contains("fewest words"), scope > 0);
+                    assert_eq!(prompt.contains("satisfy the explicit writing preferences"), learned && scope > 0);
+                    let response = if scope == 0 && !learned {
                         assert!(body.get("format").is_none());
                         assert_eq!(prompt, "Thank you for your");
                         " help.".to_owned()
                     } else {
                         assert_eq!(body["format"]["required"], json!(["insert"]));
-                        assert!(prompt.contains("at most 8 words"));
+                        if !learned {
+                            assert!(prompt.contains("at most 8 words"));
+                        }
                         json!({"insert":"help."}).to_string()
                     };
                     wire_reply(

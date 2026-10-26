@@ -150,3 +150,44 @@ filter results but were not run because the frozen preservation control failed.
 These were synthetic, transient tests, with no history access, configuration
 changes or installed-app changes. Personalization quality remains unresolved;
 discarding compatible learned preferences is not an acceptable fix.
+
+### Explicit-preference reminder with personalization
+
+A later check found that personalization bypassed the final completion reminder
+used for explicit instructions. Simply applying the existing reminder to learned
+profiles fixed the frozen Gemma4 E4B cheque conflict and retained the six other
+controls. However, one of eight previously prepared holdouts regressed: instead
+of completing `behav` as `behavior`, it added `ior after travelling`. The unchanged
+baseline returned only `ior`. That first candidate was rejected.
+
+The adopted reminder explicitly names the scoped writing instructions and limits
+learned style/vocabulary to compatible, necessary uses. It retains all learned
+entries, uses the existing strength, and adds no model request. Gemma4 E4B passed
+the seven frozen cases and the eight expanded cases. Eight further contexts,
+defined before the expanded results were inspected, retained the expected names,
+sign-offs, device names and dates. One spelling case still returned `neighbour`
+despite an American-spelling instruction; the unchanged baseline failed the same
+case. This is a remaining limitation, not a solved spelling-precedence guarantee.
+
+A Qwen3 4B cross-check retained the compatible-name controls and corrected its
+previous sign-off override failure to `Kind regards,`. Its cheque conflict remains.
+These observations support an incremental improvement on the two tested models,
+not universal instruction compliance or comparative personalization quality.
+There were 61 new completion requests across the rejected candidate, adopted
+candidate and baseline checks, with no transport errors. Optional terminal
+punctuation was allowed for end-of-text sign-offs. Review was unblinded and each
+case/condition ran once; no aggregate accuracy claim is made.
+
+The reproducible synthetic probes are:
+
+```sh
+cargo run --release --locked --example preference_conflict_probe -- gemma4:e4b
+cargo run --release --locked --example preference_holdout_probe -- gemma4:e4b
+cargo run --release --locked --example preference_holdout_probe -- gemma4:e4b fresh
+```
+
+Request-level regression tests cover global, app and website instructions with
+personalization on and off, retaining learned vocabulary in the outgoing prompt.
+Those deterministic tests verify routing and preservation, not model semantics.
+These experiments did not load history, change application preferences or replace
+the installed application. Profile extraction quality remains separate work.

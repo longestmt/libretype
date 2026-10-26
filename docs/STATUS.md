@@ -1,6 +1,6 @@
 # Status and limitations
 
-As of 2026-10-25, the current source passes 229 deterministic Rust tests.
+As of 2026-10-25, the current source passes its deterministic Rust test suites.
 Optional live tests are ignored by default and need deliberate execution.
 
 Verified workflows include basic suggestion display/acceptance in the tested
@@ -136,7 +136,10 @@ inventory check passed. Dynamic library paths refer only to macOS system files.
 
 1. **Personalization quality.** The native storage/profile lifecycle works, but
    inferred spelling conventions and explicit-instruction priority have known
-   failures. Keep the frozen conflict cases alongside compatible-profile controls
+   failures. An explicit-preference reminder improved one Gemma spelling conflict
+   and one Qwen sign-off conflict while preserving compatible-name controls; a
+   fresh neighbour/neighbor conflict remains. Keep the frozen cases alongside
+   compatible-profile controls
    when evaluating fixes; suppressing all personalization would not close this gap.
    A candidate must then be checked on new writing contexts before recommending it.
 2. **Editor coverage.** Verify code-editor chat versus source policies and terminal
