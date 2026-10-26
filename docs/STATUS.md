@@ -159,10 +159,14 @@ inventory check passed. Dynamic library paths refer only to macOS system files.
    authorized live Chrome check in build 58 failed: the reference image showed
    14:20, but the inserted completion said 9:00 a.m. The user confirmed macOS
    permission was available, and the website was identified and not excluded.
-   Existing diagnostics do not isolate capture, OCR or model compliance as the
+   Existing diagnostics did not isolate capture, OCR or model compliance as the
    cause. Screen context was turned off and original settings restored afterward.
-   Add text-free stage diagnostics before repeating the live check; preview
-   success does not establish working live screen context.
+   Processing a saved image of the synthetic page separately recognized 14:20
+   and used it in three completion checks, including the numeric-instruction
+   control. That validates the supplied image's OCR/completion path, not live
+   window selection or capture. A development build with text-free stage
+   diagnostics is installed for the next live check; renewed Screen Recording
+   approval is pending. Preview success does not establish working live context.
 4. **Performance and setup.** Build 58 captured three native typing-to-draw
    samples in Chrome: 7.50, 2.08 and 2.10 seconds, dominated by generation.
    See [measurement limits](PERFORMANCE.md). Extend this to controlled workloads
