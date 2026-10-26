@@ -133,6 +133,22 @@ This does not verify live screen capture. The matching source archive rebuilt
 with an empty Cargo cache and Cargo offline mode; all-target tests and the notice
 inventory check passed. Dynamic library paths refer only to macOS system files.
 
+Build 60 verified optional live screen context in an isolated Chrome window.
+The earlier selector assumed the first normal window in the app's window list
+owned the caret and never reached capture in this layout. The updated selector
+matches the focused editor's Accessibility window bounds to a unique valid
+on-screen window, checks that it contains the caret, and revalidates the window
+after capture. Ambiguous matches remain rejected. Regression checks cover
+auxiliary windows, wrong owners, changed bounds, hidden windows and ambiguity.
+
+The authorized native check recorded successful capture and OCR, displayed the
+reference time 14:20, and verified insertion of “14:20 on Wednesday” in one chunk.
+The user confirmed the result, and the final synthetic draft was inspected.
+A separate saved-image check also recognized the pictured time and used it in
+three completion requests. These checks establish the tested window and layout,
+not universal OCR accuracy or compatibility. Screen context was turned off and
+all original settings restored; clipboard context and history remained off.
+
 ## Remaining work, in priority order
 
 1. **Personalization quality.** The native storage/profile lifecycle works, but
@@ -154,30 +170,13 @@ inventory check passed. Dynamic library paths refer only to macOS system files.
    suggestions only in the visible control, and native diagnostics recorded
    suppression followed by a visible suggestion after returning to that control.
    This establishes those two synthetic layouts, not every hidden-editor case.
-3. **Optional live screen context.** The in-memory OCR preview recognizes an
-   invented workshop notice and uses its time in a completion. A separately
-   authorized live Chrome check in build 58 failed: the reference image showed
-   14:20, but the inserted completion said 9:00 a.m. The user confirmed macOS
-   permission was available, and the website was identified and not excluded.
-   Existing diagnostics did not isolate capture, OCR or model compliance as the
-   cause. Screen context was turned off and original settings restored afterward.
-   Processing a saved image of the synthetic page separately recognized 14:20
-   and used it in three completion checks, including the numeric-instruction
-   control. That validates the supplied image's OCR/completion path, not live
-   window selection or capture. Build 59's text-free diagnostics, with both OS
-   permissions active, isolated the live failure before capture: no matching
-   foreground window contained the caret, and zero capture requests reached OCR.
-   A candidate uses the focused editor's Accessibility window bounds to anchor
-   window selection; its ambiguity and geometry regressions pass, but native
-   verification is pending. Screen context and clipboard context remain off,
-   and original settings were restored after the diagnostic check.
-4. **Performance and setup.** Build 58 captured three native typing-to-draw
+3. **Performance and setup.** Build 58 captured three native typing-to-draw
    samples in Chrome: 7.50, 2.08 and 2.10 seconds, dominated by generation.
    See [measurement limits](PERFORMANCE.md). Extend this to controlled workloads
    and combined application/model resource use, then check actual login launch
    and clean-machine setup. These samples do not establish broad latency,
    battery impact or a complete setup experience.
-5. **Release delivery.** The dependency replacements remove the two missing-notice
+4. **Release delivery.** The dependency replacements remove the two missing-notice
    issues, and build 49 passed the native insertion check. Complete contributor review
    documented in [release instructions](RELEASING.md), then verify signing,
    upgrade Accessibility continuity, notarization and distribution. These are
