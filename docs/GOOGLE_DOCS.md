@@ -99,12 +99,13 @@ window-focus changes and opt-out still invalidate the operation. The regression
 failed before this change; all 39 extension tests pass afterward. This establishes
 the synthetic failure and fix, not the cause of the earlier live setup failure.
 
-Installed build 64 bundles companion 0.1.7. Standalone companion 0.1.9 is staged
+Installed candidate build 66 bundles companion 0.1.9. Standalone companion 0.1.9 is staged
 in the existing unpacked-extension directory; activation requires reloading that
 extension in Chrome and then reloading the document. A verified copy of the prior
-standalone package is retained locally. The native app, extension identity,
-permissions, host registration and license files are unchanged; no Accessibility
-reset is required. Live verification of 0.1.9 is pending.
+standalone package is retained locally. Extension identity, permissions and host
+registration are unchanged. Reloading the extension alone does not require an
+Accessibility reset, but installing the new native candidate does require renewed
+macOS approval. Live verification of 0.1.9 is pending.
 
 ## Data and boundaries
 

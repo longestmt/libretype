@@ -8,6 +8,11 @@ backlog below. Personalization and unverified integrations remain experimental;
 their quality/coverage improvements are not 1.0 blockers. See the finite
 [1.0 release checklist](RELEASE_1_0.md).
 
+Build 66 (1.0 release candidate) is now installed. Its complete-source archive
+passed offline rebuilding and tests, and its local preview and settings-label
+layout passed. Native acceptance is pending renewed macOS Accessibility approval.
+Historical build numbers below describe when earlier checks were performed.
+
 Verified workflows include basic suggestion display/acceptance in the tested
 apps, browser mid-line insertion, spelling and emoji replacement, alternatives,
 scoped instructions, clipboard context, daily counts and visibility changes.
@@ -175,7 +180,7 @@ startup, acceptance and distribution checks are tracked separately in the
 1. **Personalization quality.** A source fix now selects distinct eligible
    excerpts before spending the sample budget. Repeated recent records and short
    legacy records previously hid usable older samples and could prevent profile
-   generation. Regression and all-target tests pass; this fix is not installed.
+   generation. Regression and all-target tests pass; this fix is installed in build 66.
    It does not resolve model extraction or instruction-priority failures.
    The native storage/profile lifecycle works, but
    inferred spelling conventions and explicit-instruction priority have known

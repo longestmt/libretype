@@ -21,14 +21,15 @@ performance studies belong after 1.0. Cross-Mac synchronization is out of scope.
 ## Candidate acceptance
 
 - [x] Freeze scope and label experimental capabilities in documentation/settings.
-- [ ] Package the final candidate and its matching complete-source archive;
+- [x] Package the final candidate and its matching complete-source archive;
   verify offline compilation/tests, notices, source manifest and signature.
-- [ ] Install that candidate at `~/Applications/LibreType.app`, retaining rollback;
-  verify startup, model discovery and active Accessibility/keyboard listener.
+- [x] Install build 66 at `~/Applications/LibreType.app`, retaining rollback;
+  verify startup, model discovery and a local preview completion.
+- [ ] Renew macOS Accessibility approval and verify the keyboard listener.
 - [ ] Run one short native acceptance pass: ghost text, Tab, Shift-Tab, Esc,
   normal Tab without a suggestion, and pause/resume in a disposable editor.
-- [ ] Inspect the changed settings labels for clipping. If the optional Docs
-  companion is enabled, check its final packaged version in the disposable
+- [x] Inspect the changed settings labels for clipping.
+- [ ] If the optional Docs companion is enabled, check its final packaged version in the disposable
   document; do not expand this into another compatibility survey.
 - [ ] Check first-run instructions and launch-at-login behavior. State any
   untested OS/hardware limits explicitly; do not claim a clean-machine test
@@ -39,6 +40,26 @@ performance studies belong after 1.0. Cross-Mac synchronization is out of scope.
 The candidate uses application version `1.0.0` with a distinct build number.
 Until acceptance and distribution checks pass it is a **release candidate**,
 not a stable release. The numeric bundle version alone is not release approval.
+
+Candidate build 66 uses source revision
+`0bcb1b1bd924ef24dfa70e9d7f508d96d20a6d22`. Its 12,849 archive hashes and 279
+public-source files matched; empty-cache offline compilation, Rust tests (209
+library / 250 application, with overlap), 18 packaging tests, 39 companion tests
+and notice/signature checks passed. The exported app retained 145 notice files.
+The local archive and zip checksums are:
+
+```text
+a8f1891cbcac3aa44c7c8834db6c726e707e139e4650cd3e5977d78497a92a2b  libretype-1.0.0-candidate-build66-source.tar.gz
+964aa2376f0a0ff5fd40883c5c25078dbc3c4c1932655e934f64adbc02d4f088  LibreType-1.0.0-candidate-build66-macos-arm64.zip
+```
+
+The installation retained build 64 as rollback. App data files were byte-unchanged
+after startup; history stayed off and locked. The preview produced a completion,
+and both experimental labels fit their windows. Native acceptance awaits renewed
+Accessibility approval for this changed ad-hoc executable. Offline rebuilding
+does not establish bit-for-bit reproducibility. These results were recorded
+after packaging, so the archive contains the checklist as it stood at its source
+revision. Nothing has been published.
 
 ## Distribution
 
