@@ -75,7 +75,7 @@ automatically by the installer.
 The source change after build 62 accepts commas, exclamation marks and question
 marks in verified recurring profile phrases. Existing profiles remain readable
 in the new source, but build 62 and earlier reject a vault containing a profile
-with those newly accepted characters. The change is not installed yet. Use a
+with those newly accepted characters. The change is installed in build 64. Use a
 matching pre-upgrade data snapshot for an older build. Preserve newer data separately
 before any restoration, since restoring an older snapshot cannot retain writing
 recorded after that snapshot. Never reset a user's history merely to make a
@@ -163,7 +163,7 @@ The exported source produced a bundle with a valid strict ad-hoc signature,
 145 byte-verified dependency/runtime notice files, and byte-matching companion
 0.1.6 scripts. The temporary rebuild was removed. The signed executables were
 not byte-identical to the prepared bundle, so this proves offline buildability,
-not reproducibility. Native build 63 installation and startup are still pending;
+not reproducibility. Build 63 was superseded by build 64 without installation;
 no binary or source release was published.
 
 ## Build 64 source validation
@@ -171,7 +171,8 @@ no binary or source release was published.
 Build 64 is prepared from revision
 `052d3aeedcd8029ca5bc519962895ac2b9c8b318`. It combines the profile punctuation
 fix, automatic-analysis interruption and companion 0.1.7. Build 63 was retained
-in the development build backup directory. Installed build 62 is unchanged.
+in the development build backup directory. Build 64 subsequently replaced the
+installed build 62 at the canonical `~/Applications/LibreType.app` path.
 
 The matching `libretype-build64-source.tar.gz` archive has SHA-256
 `e7b29686a6d1b3940a25069970741cc4d284f213cd457304ff3189e323191973`.
@@ -186,9 +187,13 @@ The exported source produced a bundle with a valid strict ad-hoc signature,
 0.1.7 files. The temporary rebuild was removed. The signed executables differ
 from those of the prepared bundle; this establishes offline buildability, not
 bit-for-bit reproducibility. No valid certificate signing identity is currently
-available. The update check reports a changed ad-hoc identity, so installing this
-build will require checking Accessibility approval again. Installation and native
-interruption testing remain pending. The standalone companion subsequently passed
+available. The update check reported a changed ad-hoc identity. The installer
+retained the prior app, and a separate private settings/data snapshot was copied
+and hash-verified while the old app was stopped. No Keychain access was performed.
+The existing data files were unchanged after startup; history remained off and
+locked. Accessibility and keyboard listener checks subsequently became active
+for the new process. The native editor smoke check and native interruption
+test remain pending. The standalone companion subsequently passed
 the live initially-disabled setup and page-reload checks described in
 [Docs support](GOOGLE_DOCS.md). Nothing was published.
 

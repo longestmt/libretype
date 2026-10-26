@@ -21,7 +21,7 @@ cancellation, rejection of a delayed canceled result, an unchanged encrypted
 snapshot, and preservation of a subsequent manual build. A synthetic local-model
 check also observed three canceled calls exit within 3–22 ms, with unchanged vault
 bytes and successful following completions; see [limits](PERFORMANCE.md).
-This change is not yet installed; native interruption and its effect on model
+This change is installed in build 64; native interruption and its effect on model
 latency remain unmeasured.
 A synthetic lifecycle check with the local Gemma4 E4B model verified
 three encrypted samples, scheduled profile generation, lock/unlock persistence
@@ -165,7 +165,7 @@ all original settings restored; clipboard context and history remained off.
    failures. A source fix now preserves punctuation in model-selected recurring
    greetings and sign-offs, which previously dropped valid entries such as
    `Cheers!`. Source-support and encrypted-round-trip tests pass; this fix is
-   not yet installed and does not resolve model extraction or preference quality.
+   included in installed build 64 and does not resolve model extraction or preference quality.
    An explicit-preference reminder improved one Gemma spelling conflict
    and one Qwen sign-off conflict while preserving compatible-name controls.
    Removing a conflicting blanket vocabulary-spelling directive also corrected
@@ -228,8 +228,10 @@ all original settings restored; clipboard context and history remained off.
    export rebuilt and passed tests offline with an empty Cargo cache; the build
    62 export subsequently passed the same validation. Builds 63 and 64 were
    prepared, and their matching sources also rebuilt and passed tests offline;
-   neither has been installed. Build 64 consolidates profile punctuation,
-   automatic-analysis interruption and companion 0.1.7. All four rebuilt bundles
+   build 64 is now installed, while build 63 was superseded without installation.
+   Build 64 consolidates profile punctuation, automatic-analysis interruption and
+   companion 0.1.7. Its Accessibility and keyboard listener checks are active;
+   its native editor smoke check remains pending. All four rebuilt bundles
    retained the notices and verified their ad-hoc signatures. This does not
    establish bit-for-bit reproducibility or public-release readiness. Complete contributor review
    documented in [release instructions](RELEASING.md), then verify signing,

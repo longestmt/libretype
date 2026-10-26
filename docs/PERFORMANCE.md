@@ -31,7 +31,9 @@ did not replace model weights or change application settings. Repeated prompts,
 model loading and other desktop workloads were not controlled. These three
 observations establish client-call cancellation and subsequent successful
 inference, not server-side GPU release time or a comparative latency benefit.
-The change has not been installed or exercised by native keyboard input.
+The change is installed in build 64, whose Accessibility and keyboard listener
+checks are active. Interruption of a live automatic analysis by native keyboard
+input has not yet been exercised.
 
 ```sh
 cargo run --release --locked --example profile_interrupt_probe -- gemma4:e4b

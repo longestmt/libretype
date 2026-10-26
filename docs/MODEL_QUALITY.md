@@ -67,8 +67,8 @@ run and passed both individually and in the complete retry.
 
 This is a deterministic validation fix, not evidence that a model selects every
 useful phrase or reliably applies it during completion. Existing profiles do not
-gain discarded entries until rebuilt. The change is in source only; installed
-build 62 remains unchanged. Older builds reject profiles containing these newly
+gain discarded entries until rebuilt. The change is installed in build 64.
+Older builds reject profiles containing these newly
 accepted characters; preserve a pre-upgrade history-vault backup if a downgrade
 will be needed.
 

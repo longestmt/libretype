@@ -82,9 +82,9 @@ different page, but the exact interruption stage was not recorded. This attempt
 is not counted as successful live idempotence verification. Browser-restart
 persistence and other document layouts remain unverified.
 
-The app-bundled companion in build 62 remains 0.1.3. The standalone 0.1.7
-extension can be loaded independently without replacing or re-signing the app.
-Future bundles built from this source include 0.1.7.
+Installed build 64 bundles companion 0.1.7. The independently loaded standalone
+0.1.7 extension remains available without another reload or permission change
+when updating the native app.
 
 ## Data and boundaries
 
