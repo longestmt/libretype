@@ -57,6 +57,31 @@ normal builds use the matching toolchain's installed standard library. The
 compiler and Apple system libraries are separate system/build prerequisites.
 Model weights and Ollama are installed separately and are not release contents.
 
+
+## Build 61 source validation
+
+The local archive `libretype-build61-source.tar.gz`, exported from source revision
+`4d593c3af1dd72d404ea363e4833bfa6d0f27156`, was extracted to a temporary directory
+and rebuilt with an empty Cargo cache and Cargo offline mode. Its 12,844 manifest
+file hashes matched. Compilation inputs were unchanged from installed build 61;
+intervening changes only updated status and review documentation.
+
+The offline release build, all-target Rust tests (200 library and 241 application
+tests, with overlap), 18 packaging tests, 14 companion tests and notice inventory
+check passed. The exported tree also produced an app bundle with byte-checked
+dependency/runtime notices and a valid ad-hoc signature. Dependency and runtime
+source directories stayed in the source archive and were not copied into the
+binary bundle. The temporary build was removed after validation.
+
+Archive SHA-256:
+`ec8725d9d0276294536fa111371ee6ce04b11f4d1a9961d5628989fd6c5c24b2`.
+
+The rebuilt signed executables were not byte-identical to the installed ones;
+this check establishes offline buildability, not bit-for-bit reproducibility.
+It does not replace native startup checks, contributor review, certificate
+signing, notarization or verification of published downloads. No files were
+published and the installed application was unchanged by this validation.
+
 ## References
 
 - https://www.gnu.org/licenses/gpl-3.0.html (especially sections 1, 4–6 and 10)
