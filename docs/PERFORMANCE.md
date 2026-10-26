@@ -16,9 +16,26 @@ profile. A subsequent manual build still completes. Completed automatic jobs and
 locking are covered as well. These tests use invented writing and a temporary
 key, without accessing application history or Keychain.
 
-This change has not been installed or measured with native keyboard activity.
-It does not establish how quickly the model server releases compute resources or
-how much completion latency improves under competing work.
+The release-mode `profile_interrupt_probe` subsequently exercised the production
+worker and local profile generator with invented samples in a temporary encrypted
+vault. Interrupting three active calls after 150, 300 and 600 ms produced canceled
+results 2.94, 14.67 and 21.67 ms after interruption. The encrypted snapshot remained
+byte-for-byte unchanged. Each following production completion returned usable
+text, in 1.69, 1.98 and 0.40 seconds respectively.
+
+This used Ollama 0.40.11 and the locally installed `gemma4:e4b` alias, which now
+resolved to an MLX/Safetensors model with digest
+`eb2177adf7646d15faead94fdad6d3e170dc8015653418a3b7d5d52a6380be5b`.
+That differs from the model behind the earlier measurements below. The probe
+did not replace model weights or change application settings. Repeated prompts,
+model loading and other desktop workloads were not controlled. These three
+observations establish client-call cancellation and subsequent successful
+inference, not server-side GPU release time or a comparative latency benefit.
+The change has not been installed or exercised by native keyboard input.
+
+```sh
+cargo run --release --locked --example profile_interrupt_probe -- gemma4:e4b
+```
 
 ## Synthetic inference and process resources
 

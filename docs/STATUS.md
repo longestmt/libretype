@@ -18,8 +18,11 @@ paused. The current source also cancels automatic analysis if keyboard activity
 resumes, preserving the stored profile and the existing retry interval. Manual
 analysis continues when typing resumes. Worker regression tests verify epoch
 cancellation, rejection of a delayed canceled result, an unchanged encrypted
-snapshot, and preservation of a subsequent manual build. This change is not yet
-installed; native interruption and its effect on model latency remain unmeasured.
+snapshot, and preservation of a subsequent manual build. A synthetic local-model
+check also observed three canceled calls exit within 3–22 ms, with unchanged vault
+bytes and successful following completions; see [limits](PERFORMANCE.md).
+This change is not yet installed; native interruption and its effect on model
+latency remain unmeasured.
 A synthetic lifecycle check with the local Gemma4 E4B model verified
 three encrypted samples, scheduled profile generation, lock/unlock persistence
 and a completion using the restored profile with recording disabled. This used
