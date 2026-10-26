@@ -43,6 +43,14 @@ Development source is maintained in the private GitHub repository
 No public release is authorized merely by running a build. Signing and
 notarization are separate distribution tasks.
 
+For the 1.0 milestone, prepare a source-first developer release without requiring
+the maintainer to enroll in Apple's Developer Program. The complete source
+archive is the primary artifact. Any accompanying prebuilt app must be labeled
+ad-hoc signed and not notarized, with its unverified downloaded-installation
+behavior disclosed. See [installation notes](INSTALLING.md#sourcedeveloper-distribution)
+and the [draft release notes](RELEASE_NOTES_1_0.md). This does not waive source,
+notice, contributor or publication checks above.
+
 ## Build from a release source archive
 
 Use the Rust compiler version recorded in `RELEASE.json`, macOS SDK/command-line

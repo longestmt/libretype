@@ -79,13 +79,19 @@ These checks do not replace contributor review or verification after upload.
 
 - [ ] Finish the contributor/provenance review recorded in
   [third-party review](../third_party/REVIEW.md).
-- [ ] Choose and verify distribution signing. No valid certificate identity was
-  available at the last check; local candidates are ad-hoc signed. Developer ID
-  signing/notarization requires the corresponding credentials. If a deliberate
-  source/developer release is chosen instead, document its installation limits.
+- [x] Prepare the source/developer distribution path. The maintainer has no Apple
+  Developer account; acquiring one is not a 1.0 requirement. Source builds and
+  the verified ad-hoc candidate are the available artifacts. The prebuilt app is
+  not Developer ID signed or notarized, and its download installation remains
+  unverified. Installation notes state these limits. Signing/notarization can
+  be added later if credentials become available.
 - [ ] Publish the approved binary and matching source, checksums and concise
   installation/known-limit notes; verify the downloads. Follow
   [RELEASING.md](RELEASING.md). A private commit or local archive is not publication.
+
+The [candidate release notes](RELEASE_NOTES_1_0.md) are prepared locally. This
+distribution choice does not mark the remaining acceptance or publication items
+complete and does not authorize changing the repository's visibility.
 
 Final candidate acceptance and publication are the remaining milestone work.
 Experimental feature improvements do not become new release gates unless they

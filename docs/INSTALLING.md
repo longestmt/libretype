@@ -45,8 +45,25 @@ editor exposing text and a usable caret; see [tested workflows](STATUS.md).
 Compact recognized spreadsheet cells require Control-Option-Space for activation
 so Tab can continue to navigate cells.
 
-The candidate is ad-hoc signed, not Developer ID signed or notarized. General
-download installation is still a distribution gate; these instructions do not
-claim Gatekeeper approval for a downloaded copy. Keep the corresponding source
-and checksum files with any approved distribution, following
-[release instructions](RELEASING.md).
+## Source/developer distribution
+
+The planned release is source-first; an Apple Developer membership is not a
+prerequisite for building the supplied source with the existing ad-hoc build
+script. Follow [the complete-source build instructions](RELEASING.md#build-from-a-release-source-archive)
+using the compiler version recorded in the archive's `RELEASE.json`.
+
+The optional prebuilt candidate is ad-hoc signed, not Developer ID signed or
+notarized. macOS may block a downloaded copy. If you independently trust its
+source and integrity, Apple's [app-opening guidance](https://support.apple.com/en-us/102445)
+describes the per-app **Privacy & Security → Open Anyway** flow. Availability can
+depend on the warning and device policy. This candidate has not been tested
+through that downloaded-app flow; successful local development launch is not
+Gatekeeper approval. A checksum detects changed bytes but does not authenticate
+an untrusted download source.
+
+Keep the corresponding source and checksum files with any approved distribution,
+following [release instructions](RELEASING.md). Developer ID signing and
+notarization are a separate possible future distribution improvement, rather
+than a prerequisite for publishing source. Apple's
+[Developer ID documentation](https://developer.apple.com/developer-id/) describes
+the program membership required for that signing route.
