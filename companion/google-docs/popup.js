@@ -1,16 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // Copyright (c) 2026 LibreTypist contributors
-const setupButton=document.getElementById('setup');
-const result=document.getElementById('result');
-chrome.runtime.sendMessage({type:'status'}).then(reply=>{
-  document.getElementById('status').textContent=reply?.enabled?'Local companion enabled.':'Local companion is off or unavailable.';
-  setupButton.disabled=!reply?.enabled;
-},()=>{document.getElementById('status').textContent='Local companion is unavailable.';});
-setupButton.addEventListener('click',async()=>{
-  setupButton.disabled=true;
-  result.textContent='Setting up the current document…';
-  const messages={
+const messages={
     saved:'Settings saved. Click in the document and try typing.',
+    starting:'Setup is waiting for the document to regain focus. Close this popup; reopen it afterward to see the result.',
     off:'Open LibreType and enable its Google Docs companion first.',
     not_docs:'The selected tab is not a supported Google Doc. Open the document, then reopen this popup.',
     no_tab:'No active tab was found in this popup’s window. Reopen it from the Docs window’s toolbar.',
@@ -23,6 +15,17 @@ setupButton.addEventListener('click',async()=>{
     busy:'Setup is already running. Wait a moment before trying again.',
     review:'Setup stopped. Review or cancel any open Docs dialog, then use the manual steps below.',
   };
+const setupButton=document.getElementById('setup');
+const result=document.getElementById('result');
+chrome.runtime.sendMessage({type:'status'}).then(reply=>{
+  document.getElementById('status').textContent=reply?.enabled?'Local companion enabled.':'Local companion is off or unavailable.';
+  setupButton.disabled=!reply?.enabled || reply?.setupResult==='starting';
+  if(messages[reply?.setupResult])result.textContent='Last setup: '+messages[reply.setupResult];
+},()=>{document.getElementById('status').textContent='Local companion is unavailable.';});
+setupButton.addEventListener('click',async()=>{
+  setupButton.disabled=true;
+  result.textContent='Setting up the current document…';
+
   try {
     // Resolve in the popup context, not the worker's last-focused window.
     const tabs=await chrome.tabs.query({active:true,currentWindow:true});
@@ -30,6 +33,7 @@ setupButton.addEventListener('click',async()=>{
       ? await chrome.runtime.sendMessage({type:'setup',tabId:tabs[0].id})
       : {result:'no_tab'};
     result.textContent=messages[reply?.result] || messages.review;
+    if(reply?.result==='starting')window.close();
   } catch { result.textContent=messages.review; }
   finally { setupButton.disabled=false; }
 });

@@ -7,6 +7,7 @@ let sourceTab = null;
 let needsClear = false;
 let focusRevision = 0;
 let setupRun = null;
+let setupResult = null;
 const unavailable = () => ({ enabled: false, accepted: false });
 function disconnect() {
   const old = port; port = null;
@@ -41,13 +42,16 @@ function docsURL(value) {
 async function popupStatus() {
   const deadline = Date.now()+1000;
   while (pending && Date.now()<deadline) await new Promise(resolve=>setTimeout(resolve,25));
-  return pending ? unavailable() : native({type:'ping'});
+  const reply = pending ? unavailable() : await native({type:'ping'});
+  return {...reply,setupResult};
 }
 async function setupScopeIssue(tabId, revision) {
   try {
     const tab = await chrome.tabs.get(tabId);
     const window = await chrome.windows.get(tab.windowId);
     if (revision !== focusRevision) return 'focus_changed';
+    if (setupRun?.tabId===tabId
+      && (tab.windowId!==setupRun.windowId || tab.url!==setupRun.url)) return 'focus_changed';
     if (!tab.active) return 'inactive_tab';
     if (!window.focused) return 'window_unfocused';
     if (typeof tab.url !== 'string') return 'unavailable_url';
@@ -59,29 +63,52 @@ async function setupScope(tabId, revision) {
 }
 async function setupFromPopup(tabId) {
   if (setupRun) return {result:'busy'};
-  const revision = focusRevision;
-  const issue = await setupScopeIssue(tabId, revision);
-  if (issue) return {result:issue};
+  let tab;
+  try { tab = await chrome.tabs.get(tabId); } catch { return {result:'tab_unavailable'}; }
+  if (!tab.active) return {result:'inactive_tab'};
+  if (typeof tab.url !== 'string') return {result:'unavailable_url'};
+  if (!docsURL(tab.url)) return {result:'not_docs'};
   if (setupRun) return {result:'busy'};
-  // Drop old geometry and prevent normal content ticks from racing setup.
+  // The action popup can temporarily take focus from its owning Chrome window.
+  // Acknowledge first so the popup can close; no page action occurs until focus returns.
+  const lease = {tabId,windowId:tab.windowId,url:tab.url,preparing:true,cancelled:false,
+    expires:Date.now()+3000,revision:null};
+  setupRun=lease; setupResult='starting';
+  lease.completion=runSetup(lease).catch(()=>({result:'review'})).then(reply=>{
+    setupResult=reply.result;
+    return reply;
+  }).finally(()=>{if(setupRun===lease)setupRun=null;clear();});
+  return {result:'starting'};
+}
+async function runSetup(lease) {
+  // Give the acknowledged popup an opportunity to close, then inspect real focus.
+  await new Promise(resolve=>setTimeout(resolve,75));
+  while (true) {
+    if (lease.cancelled || setupRun!==lease) return {result:'focus_changed'};
+    if (Date.now()>=lease.expires) return {result:'window_unfocused'};
+    let tab,window;
+    try { tab=await chrome.tabs.get(lease.tabId);window=await chrome.windows.get(lease.windowId); }
+    catch { return {result:'tab_unavailable'}; }
+    if (lease.cancelled || setupRun!==lease || !tab.active || tab.windowId!==lease.windowId
+      || tab.url!==lease.url) return {result:'focus_changed'};
+    if (Date.now()>=lease.expires) return {result:'window_unfocused'};
+    if (window.focused) break;
+    await new Promise(resolve=>setTimeout(resolve,25));
+  }
   clear();
-  const lease = {tabId,revision:focusRevision,expires:Date.now()+10000};
-  setupRun = lease;
-  try {
-    while (pending && Date.now() < lease.expires)
-      await new Promise(resolve => setTimeout(resolve, 25));
-    if (Date.now() >= lease.expires || !await setupScope(lease.tabId, lease.revision))
-      return {result:'review'};
-    if (!(await native({type:'ping'})).enabled) return {result:'off'};
-    if (!await setupScope(lease.tabId, lease.revision)) return {result:'review'};
-    let timer;
-    const reply = await Promise.race([
-      chrome.tabs.sendMessage(lease.tabId,{type:'setupAccessibility'},{frameId:0}),
-      new Promise(resolve => { timer=setTimeout(()=>resolve({result:'review'}),10000); }),
-    ]).finally(()=>clearTimeout(timer));
-    return {result:['saved','review','unsupported','busy'].includes(reply?.result) ? reply.result : 'review'};
-  } catch { return {result:'review'}; }
-  finally { if (setupRun === lease) setupRun=null; clear(); }
+  lease.preparing=false;lease.revision=focusRevision;lease.expires=Date.now()+10000;
+  while (pending && Date.now() < lease.expires)
+    await new Promise(resolve => setTimeout(resolve, 25));
+  if (Date.now() >= lease.expires || !await setupScope(lease.tabId, lease.revision))
+    return {result:'review'};
+  if (!(await native({type:'ping'})).enabled) return {result:'off'};
+  if (!await setupScope(lease.tabId, lease.revision)) return {result:'review'};
+  let timer;
+  const reply = await Promise.race([
+    chrome.tabs.sendMessage(lease.tabId,{type:'setupAccessibility'},{frameId:0}),
+    new Promise(resolve => { timer=setTimeout(()=>resolve({result:'review'}),10000); }),
+  ]).finally(()=>clearTimeout(timer));
+  return {result:['saved','review','unsupported','busy'].includes(reply?.result) ? reply.result : 'review'};
 }
 async function route(message, sender) {
   if (message?.type === 'status' && sender.url === chrome.runtime.getURL('popup.html')) return popupStatus();
@@ -92,7 +119,7 @@ async function route(message, sender) {
   if (message?.type === 'setupGuard') {
     const lease = setupRun;
     return {allowed:Object.keys(message).length === 1 && !!lease && lease.tabId === sender.tab.id
-      && Date.now() < lease.expires && await setupScope(lease.tabId,lease.revision)
+      && !lease.preparing && Date.now() < lease.expires && await setupScope(lease.tabId,lease.revision)
       && setupRun === lease && (await native({type:'ping'})).enabled
       && setupRun === lease && Date.now() < lease.expires && lease.revision === focusRevision};
   }
@@ -127,11 +154,16 @@ chrome.runtime.onMessage.addListener((message,sender,respond) => {
   route(message,sender).then(respond,()=>respond(unavailable())); return true;
 });
 function clear() { focusRevision++; sourceTab=null; if (pending) needsClear=true; else native({type:'clear'}); }
-chrome.tabs.onActivated.addListener(clear);
-chrome.windows.onFocusChanged.addListener(clear);
+function cancelPreparing() { if(setupRun?.preparing)setupRun.cancelled=true; }
+chrome.tabs.onActivated.addListener(()=>{cancelPreparing();clear();});
+chrome.windows.onFocusChanged.addListener(id=>{
+  if(setupRun?.preparing && id>=0 && id!==setupRun.windowId)cancelPreparing();
+  clear();
+});
 chrome.tabs.onUpdated.addListener((id,change)=>{
   if (change.url || change.status==='loading') {
+    if(id===setupRun?.tabId)cancelPreparing();
     if (id===sourceTab) clear(); else focusRevision++;
   }
 });
-chrome.tabs.onRemoved.addListener(id=>{ if (id===sourceTab) clear(); else focusRevision++; });
+chrome.tabs.onRemoved.addListener(id=>{ if(id===setupRun?.tabId)cancelPreparing(); if (id===sourceTab) clear(); else focusRevision++; });

@@ -36,11 +36,16 @@ popup. Version 0.1.4 passed automated and disposable-browser checks, but its liv
 check reported that no editable Doc was selected even while suggestions worked
 in that document. This is a failed helper check, not a setup success.
 
-Version 0.1.5 resolves the target tab in the popup's own window and passes that
-tab ID to the worker. It retains active-tab, window-focus, URL and change checks,
-and distinguishes those failures in the popup without displaying document
-addresses. Its 24 extension tests and 18 packaging tests pass; a live retest is
-pending. The app-bundled companion remains 0.1.3, while the standalone candidate
+Version 0.1.5 resolved the target tab in the popup's own window and distinguished
+scope failures. The live retest identified the document window as unfocused
+while the popup was open. Version 0.1.6 acknowledges the button action and closes
+the popup first. It waits up to three seconds for the same active document in
+the same window to regain focus before any page action. Tab changes, navigation,
+another Chrome window, or a timeout stop setup. Existing focus and opt-out checks
+remain active during the operation. Reopening the popup shows the last setup
+result, held only in worker memory and containing no document address or text.
+Its 27 extension tests and 18 packaging tests pass; a live retest is pending.
+The app-bundled companion remains 0.1.3, while the standalone candidate
 can be loaded independently without replacing or re-signing the app.
 
 The button requires the local companion to be enabled and the current Chrome

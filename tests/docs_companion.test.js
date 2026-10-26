@@ -202,23 +202,66 @@ test('the observed Docs window maps raw caret 1020 into its 1037-unit native val
 });
 
 const popupSender=()=>({url:'chrome-extension://test/popup.html'});
+async function requestSetup(h,message={type:'setup',tabId:1},from=popupSender()) {
+  const reply=await h.context.route(message,from);
+  if(reply.result!=='starting')return reply;
+  return vm.runInContext('setupRun.completion',h.context);
+}
+test('closing the popup restores focus before setup and the result survives reopening',async()=>{
+  const h=harness();h.setFocused(false);let sends=0;
+  h.chrome.tabs.sendMessage=async()=>{sends++;return {result:'saved'}};
+  const reply=await h.context.route({type:'setup',tabId:1},popupSender());
+  assert.equal(reply.result,'starting');
+  const completion=vm.runInContext('setupRun.completion',h.context);
+  await new Promise(resolve=>setTimeout(resolve,100));
+  assert.equal(sends,0);
+  assert.equal((await h.context.route({type:'setupGuard'},sender())).allowed,false);
+  h.setFocused(true);
+  h.chrome.windows.onFocusChanged.listeners.forEach(fn=>fn(2));
+  assert.equal((await completion).result,'saved');assert.equal(sends,1);
+  const status=await h.context.route({type:'status'},popupSender());
+  assert.equal(status.setupResult,'saved');
+  assert.equal(JSON.stringify(status).includes('synthetic_123'),false);
+  const nodes={setup:{addEventListener(){}},status:{},result:{}};
+  const context=vm.createContext({document:{getElementById:id=>nodes[id]},
+    chrome:{runtime:{sendMessage:async()=>status}}});
+  vm.runInContext(fs.readFileSync(path.join(root,'popup.js'),'utf8'),context);
+  await Promise.resolve();
+  assert.match(nodes.result.textContent,/Last setup: Settings saved/);
+});
+test('tab, URL, or other-window changes cancel setup while popup focus is returning',async()=>{
+  for(const disrupt of [
+    h=>h.chrome.tabs.onActivated.listeners.forEach(fn=>fn({tabId:3})),
+    h=>h.chrome.windows.onFocusChanged.listeners.forEach(fn=>fn(3)),
+    h=>h.chrome.tabs.onUpdated.listeners.forEach(fn=>fn(1,{url:url+'?changed'})),
+    h=>{h.chrome.tabs.get=async id=>({id,windowId:2,active:true,url:url+'?changed'})},
+    h=>{h.chrome.tabs.get=async id=>({id,windowId:3,active:true,url})},
+  ]) {
+    const h=harness();h.setFocused(false);let sends=0;
+    h.chrome.tabs.sendMessage=async()=>{sends++;return {result:'saved'}};
+    assert.equal((await h.context.route({type:'setup',tabId:1},popupSender())).result,'starting');
+    const completion=vm.runInContext('setupRun.completion',h.context);
+    disrupt(h);h.setFocused(true);
+    assert.equal((await completion).result,'focus_changed');assert.equal(sends,0);
+  }
+});
 test('popup binds setup to its own active tab, not the worker last-focused window',async()=>{
-  let click;const requests=[];
+  let click,closed=false;const requests=[];
   const button={disabled:true,addEventListener:(_type,fn)=>{click=fn}};
   const nodes={setup:button,status:{},result:{}};
-  const context=vm.createContext({document:{getElementById:id=>nodes[id]},chrome:{
+  const context=vm.createContext({window:{close:()=>{closed=true}},document:{getElementById:id=>nodes[id]},chrome:{
     tabs:{query:async query=>{assert.equal(JSON.stringify(query),JSON.stringify({active:true,currentWindow:true}));return [{id:37}]}},
-    runtime:{sendMessage:async message=>{requests.push(JSON.parse(JSON.stringify(message)));return message.type==='status'?{enabled:true}:{result:'saved'}}},
+    runtime:{sendMessage:async message=>{requests.push(JSON.parse(JSON.stringify(message)));return message.type==='status'?{enabled:true}:{result:'starting'}}},
   }});
   vm.runInContext(fs.readFileSync(path.join(root,'popup.js'),'utf8'),context);
   await Promise.resolve();await click();
   assert.deepEqual(requests,[{type:'status'},{type:'setup',tabId:37}]);
-  assert.equal(nodes.result.textContent,'Settings saved. Click in the document and try typing.');
+  assert.equal(closed,true);assert.match(nodes.result.textContent,/regain focus/);
   const h=harness();
   h.chrome.tabs.query=async()=>{throw new Error('Must not look up a different window')};
   h.chrome.tabs.get=async id=>{assert.equal(id,37);return {id,windowId:2,active:true,url}};
   h.chrome.tabs.sendMessage=async id=>{assert.equal(id,37);return {result:'saved'}};
-  assert.equal((await h.context.route(requests[1],popupSender())).result,'saved');
+  assert.equal((await requestSetup(h,requests[1])).result,'saved');
 });
 test('setup reports scope failures without exposing addresses or touching the document',async()=>{
   for(const [patch,expected] of [
@@ -228,20 +271,20 @@ test('setup reports scope failures without exposing addresses or touching the do
     const h=harness();let sends=0;
     h.chrome.tabs.get=async id=>({id,windowId:2,active:true,url,...patch});
     h.chrome.tabs.sendMessage=async()=>{sends++;return {result:'saved'}};
-    const reply=await h.context.route({type:'setup',tabId:1},popupSender());
+    const reply=await requestSetup(h);
     assert.equal(JSON.stringify(reply),JSON.stringify({result:expected}));
     assert.equal(sends,0);assert.equal(h.messages.length,0);
   }
   const h=harness();
   h.chrome.tabs.get=async()=>{throw new Error('closed tab')};
-  assert.equal((await h.context.route({type:'setup',tabId:1},popupSender())).result,'tab_unavailable');
+  assert.equal((await requestSetup(h)).result,'tab_unavailable');
   h.chrome.tabs.get=async id=>{
     h.chrome.tabs.onActivated.listeners.forEach(fn=>fn({tabId:2}));
     return {id,windowId:2,active:true,url};
   };
-  assert.equal((await h.context.route({type:'setup',tabId:1},popupSender())).result,'focus_changed');
+  assert.equal((await requestSetup(h)).result,'focus_changed');
   for(const tabId of [-1,1.2,'1',null,undefined]) {
-    assert.equal((await h.context.route({type:'setup',tabId},popupSender())).accepted,false);
+    assert.equal((await requestSetup(h,{type:'setup',tabId})).accepted,false);
   }
 });
 test('Docs setup requires the popup, an enabled app, and a focused Docs tab',async()=>{
@@ -255,10 +298,10 @@ test('Docs setup requires the popup, an enabled app, and a focused Docs tab',asy
   assert.equal((await h.context.route({type:'setup',tabId:1},sender())).accepted,false);
   assert.equal((await h.context.route({type:'setup',tabId:1,extra:'untrusted'},popupSender())).accepted,false);
   h.setFocused(false);
-  assert.equal((await h.context.route({type:'setup',tabId:1},popupSender())).result,'window_unfocused');
+  assert.equal((await requestSetup(h)).result,'window_unfocused');
   assert.equal(sends,0);
   h.setFocused(true);
-  assert.equal((await h.context.route({type:'setup',tabId:1},popupSender())).result,'saved');
+  assert.equal((await requestSetup(h)).result,'saved');
   assert.equal(sends,1);
   assert.equal((await h.context.route({type:'setupGuard'},sender())).allowed,false);
   assert.equal(h.messages.some(m=>!['ping','clear'].includes(m.type)),false);
@@ -267,9 +310,9 @@ test('setup leases reject changed focus, unrelated tabs, and overlapping request
   const h=harness();let finish;
   h.chrome.tabs.query=async()=>[{id:1,windowId:2,active:true,url}];
   h.chrome.tabs.sendMessage=()=>new Promise(resolve=>{finish=resolve});
-  const request=h.context.route({type:'setup',tabId:1},popupSender());
+  const request=requestSetup(h);
   while(!finish) await new Promise(resolve=>setImmediate(resolve));
-  assert.equal((await h.context.route({type:'setup',tabId:1},popupSender())).result,'busy');
+  assert.equal((await requestSetup(h)).result,'busy');
   assert.equal((await h.context.route({type:'setupGuard'},{...sender(),tab:{id:3}})).allowed,false);
   assert.equal((await h.context.route(sample(),sender())).accepted,false);
   h.chrome.tabs.onActivated.listeners.forEach(fn=>fn({tabId:3}));
@@ -282,7 +325,7 @@ test('a disabled local app cannot initiate document setup',async()=>{
   h.chrome.tabs.query=async()=>[{id:1,windowId:2,active:true,url}];
   h.chrome.tabs.sendMessage=async()=>{sends++;return {result:'saved'}};
   h.context.native=async()=>({enabled:false,accepted:false});
-  assert.equal((await h.context.route({type:'setup',tabId:1},popupSender())).result,'off');
+  assert.equal((await requestSetup(h)).result,'off');
   assert.equal(sends,0);
 });
 
@@ -380,5 +423,14 @@ test('turning the companion off revokes an active setup lease',async()=>{
     assert.equal((await h.context.route({type:'setupGuard'},sender())).allowed,false);
     return {result:'review'};
   };
-  assert.equal((await h.context.route({type:'setup',tabId:1},popupSender())).result,'review');
+  assert.equal((await requestSetup(h)).result,'review');
+});
+test('active setup rejects a changed document even before a navigation event arrives',async()=>{
+  const h=harness();
+  h.chrome.tabs.sendMessage=async()=>{
+    h.chrome.tabs.get=async id=>({id,windowId:2,active:true,url:url+'?changed'});
+    assert.equal((await h.context.route({type:'setupGuard'},sender())).allowed,false);
+    return {result:'review'};
+  };
+  assert.equal((await requestSetup(h)).result,'review');
 });
