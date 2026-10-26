@@ -144,6 +144,9 @@ pub(super) struct Engine {
     result_sender: mpsc::Sender<Reply>,
     replies: mpsc::Receiver<Reply>,
     pending: Option<Pending>,
+    last_stage: &'static str,
+    capture_requests: u64,
+    recognized_text_results: u64,
 }
 impl Engine {
     pub(super) fn new(epoch: Arc<AtomicU64>) -> Self {
@@ -172,13 +175,30 @@ impl Engine {
             result_sender,
             replies,
             pending: None,
+            last_stage: "Not requested",
+            capture_requests: 0,
+            recognized_text_results: 0,
         }
     }
     pub(super) fn clear(&mut self) {
-        self.pending = None;
+        if self.pending.take().is_some() {
+            self.last_stage = "Request canceled";
+        }
     }
     pub(super) fn waiting(&self) -> bool {
         self.pending.is_some()
+    }
+    /// Fixed labels and counters only: never OCR text, window titles or IDs.
+    pub(super) unsafe fn diagnostic(&self, enabled: bool) -> serde_json::Value {
+        serde_json::json!({
+            "enabled": enabled,
+            "supported": supported(),
+            "permission": permitted(),
+            "pending": self.pending.is_some(),
+            "last_stage": self.last_stage,
+            "capture_requests": self.capture_requests,
+            "recognized_text_results": self.recognized_text_results,
+        })
     }
 }
 
@@ -196,7 +216,10 @@ unsafe fn start_capture(
         if epoch.load(Ordering::SeqCst)!=id { return; }
         let pool:id=msg_send![class!(NSAutoreleasePool),new];
         let capture=|| {
-            if content==nil || error!=nil || !CGPreflightScreenCaptureAccess() || IsSecureEventInputEnabled() || front_identity().0!=window.pid { return false; }
+            if content==nil || error!=nil { return Err("Shareable-window enumeration failed"); }
+            if !CGPreflightScreenCaptureAccess() { return Err("Screen permission unavailable"); }
+            if IsSecureEventInputEnabled() { return Err("Secure input activated"); }
+            if front_identity().0!=window.pid { return Err("Foreground app changed before capture"); }
             let windows:id=msg_send![content,windows]; let count:usize=msg_send![windows,count];
             let mut selected=nil;
             for index in 0..count.min(1024) {
@@ -205,10 +228,12 @@ unsafe fn start_capture(
                 if number!=window.id { continue; }
                 let owner:id=msg_send![candidate,owningApplication]; let pid:i32=msg_send![owner,processID];
                 let visible:BOOL=msg_send![candidate,isOnScreen]; let frame:NSRect=msg_send![candidate,frame];
-                if pid!=window.pid || visible!=YES || [frame.origin.x,frame.origin.y,frame.size.width,frame.size.height].iter().zip(window.bounds).any(|(a,b)|(a-b).abs()>2.) { return false; }
+                if pid!=window.pid || visible!=YES { return Err("Window owner or visibility changed"); }
+                if [frame.origin.x,frame.origin.y,frame.size.width,frame.size.height].iter().zip(window.bounds).any(|(a,b)|(a-b).abs()>2.) { return Err("Window geometry changed before capture"); }
                 selected=candidate; break;
             }
-            if selected==nil || epoch.load(Ordering::SeqCst)!=id { return false; }
+            if selected==nil { return Err("Requested window absent from shareable content"); }
+            if epoch.load(Ordering::SeqCst)!=id { return Err("Capture request superseded"); }
             let filter:id=msg_send![class!(SCContentFilter),alloc];
             let filter:id=msg_send![filter,initWithDesktopIndependentWindow:selected];
             let config:id=msg_send![class!(SCStreamConfiguration),new];
@@ -232,9 +257,9 @@ unsafe fn start_capture(
             });
             let _:()=msg_send![class!(SCScreenshotManager),captureImageWithFilter:filter configuration:config completionHandler:done.as_ptr()];
             let _:()=msg_send![config,release]; let _:()=msg_send![filter,release];
-            true
+            Ok(())
         };
-        if !capture() { let _=out.send(Reply{id,result:Err("Window changed or capture unavailable")}); }
+        if let Err(reason)=capture() { let _=out.send(Reply{id,result:Err(reason)}); }
         let _:()=msg_send![pool,drain];
     });
     let _: () = msg_send![class!(SCShareableContent),getShareableContentExcludingDesktopWindows:YES onScreenWindowsOnly:YES completionHandler:completion.as_ptr()];
@@ -372,35 +397,46 @@ impl State {
                 return self.dispatch_work(self.config.clone(), work);
             }
         }
-        if let Some(ctx) = &self.context {
-            if screen_allowed(&self.config, &ctx.app, ctx.website.as_deref())
-                && supported()
-                && permitted()
-                && capture_selected(&self.config, 0.08, true).is_some_and(|now| ctx.same(&now))
-            {
-                if let Some(window) = active_window(ctx) {
-                    let caret = window
-                        .normalized_caret([ctx.caret.origin.x, ctx.caret.origin.y])
-                        .unwrap();
-                    let id = work.id();
-                    self.screen.pending = Some(Pending {
-                        work,
-                        config: self.config.clone(),
-                        window: Some(window),
-                        started: Instant::now(),
-                    });
-                    start_capture(
-                        window,
-                        caret,
-                        id,
-                        self.epoch.clone(),
-                        self.screen.images.clone(),
-                        self.screen.result_sender.clone(),
-                    );
-                    return true;
-                }
+        let skip = if !self.config.background.screen {
+            "Disabled"
+        } else if let Some(ctx) = &self.context {
+            if !screen_allowed(&self.config, &ctx.app, ctx.website.as_deref()) {
+                "Context excluded or website unidentified"
+            } else if !supported() {
+                "Screen capture unsupported"
+            } else if !permitted() {
+                "Screen permission unavailable"
+            } else if capture_selected(&self.config, 0.08, true).is_none_or(|now| !ctx.same(&now)) {
+                "Focused context changed before capture"
+            } else if let Some(window) = active_window(ctx) {
+                let caret = window
+                    .normalized_caret([ctx.caret.origin.x, ctx.caret.origin.y])
+                    .unwrap();
+                let id = work.id();
+                self.screen.pending = Some(Pending {
+                    work,
+                    config: self.config.clone(),
+                    window: Some(window),
+                    started: Instant::now(),
+                });
+                self.screen.last_stage = "Capturing active window";
+                self.screen.capture_requests = self.screen.capture_requests.saturating_add(1);
+                start_capture(
+                    window,
+                    caret,
+                    id,
+                    self.epoch.clone(),
+                    self.screen.images.clone(),
+                    self.screen.result_sender.clone(),
+                );
+                return true;
+            } else {
+                "No matching foreground window contains the caret"
             }
-        }
+        } else {
+            "No focused context"
+        };
+        self.screen.last_stage = skip;
         self.dispatch_work(self.config.clone(), work)
     }
     pub(super) unsafe fn preview_screen(
@@ -471,9 +507,19 @@ impl State {
                 _ => false,
             };
             if !valid {
+                self.screen.last_stage = "Focused context or window changed after capture";
                 self.clear();
                 return;
             }
+        }
+        self.screen.last_stage = match &result {
+            Ok(text) if text.trim().is_empty() => "No readable text recognized",
+            Ok(_) if preview => "Synthetic preview recognized text",
+            Ok(_) => "Screen text recognized",
+            Err(reason) => reason,
+        };
+        if !preview && result.as_ref().is_ok_and(|text| !text.trim().is_empty()) {
+            self.screen.recognized_text_results = self.screen.recognized_text_results.saturating_add(1);
         }
         match result {
             Ok(text) => {
@@ -510,6 +556,64 @@ impl State {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[link(name = "ImageIO", kind = "framework")]
+    extern "C" {
+        fn CGImageSourceCreateWithData(data: CF, options: CF) -> CF;
+        fn CGImageSourceCreateImageAtIndex(source: CF, index: usize, options: CF) -> CF;
+    }
+
+    #[test]
+    #[ignore = "explicit synthetic Nacre fixture image and local model; never captures a window"]
+    fn synthetic_window_fixture_live() {
+        let path = std::env::var("LIBRETYPE_SYNTHETIC_IMAGE")
+            .expect("Set LIBRETYPE_SYNTHETIC_IMAGE to the invented Nacre test-page image");
+        let bytes = std::fs::read(path).unwrap();
+        assert!(!bytes.is_empty() && bytes.len() < 4 * 1024 * 1024);
+        let text = unsafe {
+            let pool: id = msg_send![class!(NSAutoreleasePool), new];
+            let data: id = msg_send![class!(NSData),dataWithBytes:bytes.as_ptr() length:bytes.len()];
+            let source = OwnedCf(CGImageSourceCreateWithData(data as CF, ptr::null()));
+            assert!(!source.0.is_null());
+            let image = Image(CGImageSourceCreateImageAtIndex(source.0, 0, ptr::null()));
+            assert!(!image.0.is_null());
+            // Caret in the draft, below the reference image, as in this fixture.
+            let text = recognize(&image, [0.45, 0.38]).unwrap();
+            let _: () = msg_send![pool, drain];
+            text
+        };
+        assert!(text.contains("Nacre") && text.contains("14:20"));
+        let mut all_correct = true;
+        for instructions in ["", "7", "Use concise, polite wording."] {
+            let mut config = Config {
+                model: std::env::var("LIBRETYPE_SYNTHETIC_MODEL")
+                    .unwrap_or_else(|_| "gemma4:e4b".into()),
+                writing_instructions: instructions.into(),
+                ..Config::default()
+            };
+            config.background.screen = true;
+            let mut background = crate::background::Background::default();
+            background.set_screen(&text);
+            let request = CompletionRequest {
+                id: 1,
+                prefix: "The Nacre workshop begins at ".into(),
+                suffix: String::new(),
+                app_id: "com.google.Chrome".into(),
+                website: Some("127.0.0.1".into()),
+                profile: None,
+                background,
+            };
+            let started = Instant::now();
+            let output = model::generate(&config, &request, &AtomicU64::new(1)).unwrap();
+            let correct = output.contains("14:20")
+                || (output.contains("2:20") && output.to_lowercase().contains("p.m."));
+            println!("{}", serde_json::json!({"synthetic_instructions": instructions,
+                "output":output,"time_matches":correct,
+                "elapsed_ms":started.elapsed().as_secs_f64()*1000.}));
+            all_correct &= correct;
+        }
+        assert!(all_correct, "The completion must use the synthetic reference time");
+    }
+
     #[test]
     #[ignore = "synthetic image, OCR worker cancellation, and downloaded local model; no screen capture"]
     fn synthetic_ocr_and_model_live() {

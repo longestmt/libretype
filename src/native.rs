@@ -1954,6 +1954,7 @@ impl State {
         let snapshot = serde_json::json!({
             "capture": capture,
             "history": self.history.diagnostic(&self.config),
+            "screen_context": self.screen.diagnostic(self.config.background.screen),
             "request_profile_attached": self.request_profile_attached,
             "personalized_requests": self.personalized_requests,
             "pipeline": self.pipeline_status,
