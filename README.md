@@ -6,6 +6,7 @@ separately installed Ollama service. No subscription, account or usage quota.
 **1.0 release candidate:** features are frozen. Packaging and final acceptance
 are in progress; this is not yet a published stable release. See the
 [1.0 checklist](docs/RELEASE_1_0.md) for the remaining release work.
+Candidate setup and platform limits are in [installation notes](docs/INSTALLING.md).
 
 ## Features
 

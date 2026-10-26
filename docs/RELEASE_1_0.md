@@ -25,15 +25,16 @@ performance studies belong after 1.0. Cross-Mac synchronization is out of scope.
   verify offline compilation/tests, notices, source manifest and signature.
 - [x] Install build 66 at `~/Applications/LibreType.app`, retaining rollback;
   verify startup, model discovery and a local preview completion.
-- [ ] Renew macOS Accessibility approval and verify the keyboard listener.
+- [x] Renew macOS Accessibility approval and verify the keyboard listener.
 - [ ] Run one short native acceptance pass: ghost text, Tab, Shift-Tab, Esc,
   normal Tab without a suggestion, and pause/resume in a disposable editor.
 - [x] Inspect the changed settings labels for clipping.
 - [ ] If the optional Docs companion is enabled, check its final packaged version in the disposable
   document; do not expand this into another compatibility survey.
-- [ ] Check first-run instructions and launch-at-login behavior. State any
-  untested OS/hardware limits explicitly; do not claim a clean-machine test
-  based on an existing development installation.
+- [x] Document first-run instructions and untested OS/hardware limits in
+  [installation notes](INSTALLING.md).
+- [ ] Verify launch-at-login behavior; do not claim a clean-machine test based
+  on an existing development installation.
 - [ ] Complete 1–2 days of ordinary-use feedback with no known unresolved
   crash, unintended insertion, privacy-boundary failure or core typing regression.
 
@@ -55,8 +56,9 @@ a8f1891cbcac3aa44c7c8834db6c726e707e139e4650cd3e5977d78497a92a2b  libretype-1.0.
 
 The installation retained build 64 as rollback. App data files were byte-unchanged
 after startup; history stayed off and locked. The preview produced a completion,
-and both experimental labels fit their windows. Native acceptance awaits renewed
-Accessibility approval for this changed ad-hoc executable. Offline rebuilding
+and both experimental labels fit their windows. Renewed Accessibility approval
+and the keyboard listener are now active in the running build 66 process. Native
+typing acceptance is pending. Offline rebuilding
 does not establish bit-for-bit reproducibility. These results were recorded
 after packaging, so the archive contains the checklist as it stood at its source
 revision. Nothing has been published.
