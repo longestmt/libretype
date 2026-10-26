@@ -3,6 +3,11 @@
 As of 2026-10-26, the current source passes its deterministic Rust test suites.
 Optional live tests are ignored by default and need deliberate execution.
 
+The 1.0 feature set is frozen. Release preparation takes priority over the broader
+backlog below. Personalization and unverified integrations remain experimental;
+their quality/coverage improvements are not 1.0 blockers. See the finite
+[1.0 release checklist](RELEASE_1_0.md).
+
 Verified workflows include basic suggestion display/acceptance in the tested
 apps, browser mid-line insertion, spelling and emoji replacement, alternatives,
 scoped instructions, clipboard context, daily counts and visibility changes.
@@ -161,7 +166,11 @@ three completion requests. These checks establish the tested window and layout,
 not universal OCR accuracy or compatibility. Screen context was turned off and
 all original settings restored; clipboard context and history remained off.
 
-## Remaining work, in priority order
+## Broader backlog and release evidence
+
+Items 1–2 and expanded performance experiments are post-1.0 work. Final package,
+startup, acceptance and distribution checks are tracked separately in the
+[1.0 checklist](RELEASE_1_0.md).
 
 1. **Personalization quality.** A source fix now selects distinct eligible
    excerpts before spending the sample budget. Repeated recent records and short

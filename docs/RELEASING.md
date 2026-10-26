@@ -4,6 +4,9 @@ Application-owned code and documentation use GPL-3.0-only. The full license is
 in LICENSE. Third-party files remain under their own terms. This policy does not
 withdraw MIT permissions already granted for earlier copies.
 
+The current milestone is the frozen [1.0 release checklist](RELEASE_1_0.md).
+Historical build validation below records evidence, not additional feature gates.
+
 ## Before publishing
 
 1. Review `python3 scripts/public_source.py --list`. New file categories are
@@ -196,6 +199,24 @@ for the new process. The native editor smoke check and native interruption
 test remain pending. The standalone companion subsequently passed
 the live initially-disabled setup and page-reload checks described in
 [Docs support](GOOGLE_DOCS.md). Nothing was published.
+
+## Build 65 source validation
+
+Build 65 was staged from revision
+`924f93de3faf0832cbbdbfcfb7ffc281f1920843`, including the distinct eligible history
+sample selection fix and companion 0.1.9. It was not installed; build 64 remains
+the installed development version. Its matching archive
+`libretype-build65-source.tar.gz` has SHA-256
+`7569c0d6ca2006d8bdb8274b23898f9bfbebaa6e686a3b605d535bdf0d1108b2`.
+
+All 12,848 archive manifest hashes and 278 public source files were verified.
+An empty-cache, offline rebuild passed all-target Rust tests (209 library and
+250 application tests, with overlap), 18 packaging tests, 39 companion tests
+and the notice check. The rebuilt app passed strict ad-hoc signature verification
+and byte checks for 145 dependency/runtime notices. Dependency/runtime sources
+remained in the source archive, outside the app. Temporary rebuild files were
+removed. Signed executables differed from the staged ones; this proves offline
+buildability, not reproducibility. No files were published.
 
 ## References
 

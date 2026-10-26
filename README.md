@@ -3,6 +3,10 @@
 A macOS typing assistant written in Rust, with local suggestions through a
 separately installed Ollama service. No subscription, account or usage quota.
 
+**1.0 release candidate:** features are frozen. Packaging and final acceptance
+are in progress; this is not yet a published stable release. See the
+[1.0 checklist](docs/RELEASE_1_0.md) for the remaining release work.
+
 ## Features
 
 - Inline ghost text, with word-by-word or full acceptance and a stable remainder.
@@ -11,7 +15,8 @@ separately installed Ollama service. No subscription, account or usage quota.
 - Custom shortcuts, manual activation, pause/resume and dismissal controls.
 - Spelling suggestions, emoji shortcodes, word alternatives and synonyms.
 - Local model selection and explicit downloads.
-- Optional clipboard/screen context and encrypted writing-history personalization.
+- Optional clipboard/screen context.
+- Experimental encrypted writing-history personalization (off by default).
 - Accepted-word statistics and optional launch at login.
 
 Compatibility depends on the editor exposing accessible text and a usable caret.
@@ -19,6 +24,12 @@ Basic flows have been exercised in TextEdit, Signal, Gmail, Discord, Chrome,
 Safari and VSCodium; this is not a promise of support for every field in those apps.
 Google Docs has experimental support through an [optional Chrome companion](docs/GOOGLE_DOCS.md).
 See [status and limitations](docs/STATUS.md).
+
+Learned style and vocabulary remain experimental: profiles can omit recurring
+names or apply spelling and sign-offs inconsistently. Terminal integrations and
+editor layouts without live verification are also experimental. These limitations
+do not block 1.0; broader compatibility and personalization improvements follow
+after release.
 
 ## Build and run
 

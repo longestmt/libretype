@@ -3313,7 +3313,7 @@ unsafe fn setup_window(target: id, config: &Config) -> SettingsUi {
     let google_docs: id = msg_send![class!(NSButton), alloc];
     let google_docs: id = msg_send![google_docs, initWithFrame:NSRect::new(NSPoint::new(24.,55.),NSSize::new(550.,22.))];
     let _: () = msg_send![google_docs,setButtonType:3usize];
-    set_title(google_docs,"Enable optional Google Docs companion (Chrome extension required)");
+    set_title(google_docs,"Google Docs companion — experimental (Chrome extension required)");
     let _: () = msg_send![google_docs,setState:if config.google_docs {1isize} else {0isize}];
     let _: () = msg_send![view,addSubview:google_docs];
     let _: () = msg_send![google_docs,release];

@@ -605,7 +605,7 @@ impl HistoryUi {
             target,
             sel!(revertHistory:),
         );
-        label(view,"Optional learning from your writing. History is encrypted on this Mac.\nRecording and style influence start off. Unlock explicitly each time you launch.\nNew records need at least 40 non-whitespace characters.",frame(24.,680.,630.,45.),12.);
+        label(view,"Experimental personalization; learned style may be inconsistent. History is encrypted.\nRecording and style influence start off. Unlock explicitly each time you launch.\nNew records need at least 40 non-whitespace characters.",frame(24.,680.,630.,45.),12.);
         let recording = checkbox(view, "Record new writing in eligible fields", 648.);
         let record_without_acceptance = checkbox(
             view,
