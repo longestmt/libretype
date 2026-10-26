@@ -48,6 +48,11 @@ opens before Ollama is ready, it retries the model lookup automatically. The men
 and Local models window distinguish an unavailable service from a missing model.
 Use **Open Ollama** in Local models if the service is stopped; LibreType keeps your
 selected model and never downloads or switches models automatically.
+Downloaded GGUF models and MLX Safetensors models reported by local Ollama are
+supported. MLX entries must identify the MLX runner and completion capability;
+cloud references, unknown formats and incomplete metadata are rejected. Models
+remain optional and separate from the app. Larger models can need substantially
+more memory and may produce slower suggestions; see [model checks](docs/MODEL_QUALITY.md).
 
 ## Default controls
 

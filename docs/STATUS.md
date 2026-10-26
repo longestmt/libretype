@@ -167,6 +167,11 @@ all original settings restored; clipboard context and history remained off.
    improvement, and another recovered an identifier but regressed two previously
    passing spelling/context checks. Neither was adopted. A candidate must then
    be checked on new writing contexts before recommending it.
+   A newer small-model follow-up did not improve the preservation gate. A local
+   MLX 12B model improved some longer-profile conflicts but remained inconsistent
+   and used substantially more memory. Optional MLX compatibility is implemented
+   and passed synthetic completion, synonyms and profile checks; native editor
+   verification is pending. The installed build and selected model are unchanged.
 2. **Editor coverage.** Extend code-editor policy checks beyond the verified
    VSCodium source editor and Twinny composer to other chat/source surfaces,
    and verify terminal AI prompt/multiplexer layouts. The reported spreadsheet
