@@ -99,4 +99,30 @@ sums, refuses another process or an existing output path, and exports only the
 new timing samples. Health snapshots refresh about once per second, so rapid
 samples may be missed. Missing/canceled/failed completions are not included; a
 small controlled sample is not a population latency or battery benchmark.
-Native verification of this instrumentation is pending.
+
+### Native Chrome check, build 58
+
+Three successful typing-to-draw samples were captured in disposable Chrome
+textareas after Accessibility and the keyboard listener were active. The user
+typed the three displayed phrases and confirmed completion of the check.
+
+| Sample | Event to capture | Capture to request | Model worker | Reply to draw | Event to draw |
+| --- | --- | --- | --- | --- | --- |
+| 1 | 60 ms | 352 ms | 6,978 ms | 43 ms | 7,496 ms |
+| 2 | 73 ms | 357 ms | 1,616 ms | 17 ms | 2,083 ms |
+| 3 | 85 ms | 314 ms | 1,650 ms | 19 ms | 2,097 ms |
+
+Request-to-worker was below 0.03 ms; worker-to-reply was 20–63 ms. Generation,
+including its metadata checks and possible fallback, dominated all three
+samples. The larger first interval was not isolated to model loading: loading,
+cache state and other desktop workloads were not controlled, so its cause is
+undetermined. These are samples of successful draws, not per-phrase latency
+guarantees or a complete success-rate measurement. The sampler stores no text
+with which to identify the particular keystroke that began each sample.
+
+The selected model was Gemma4 E4B with the digest listed above. Settings were
+unchanged: 250 ms configured debounce, 1,200 context characters, eight maximum
+words, and existing explicit writing instructions. History, clipboard and
+screen context remained off. The native tracker and numeric-only sampler are
+now exercised together; broader latency, battery and controlled resource
+comparisons remain outstanding.
