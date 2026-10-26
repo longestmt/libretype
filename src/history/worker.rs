@@ -110,6 +110,7 @@ enum Command {
     Append(Vec<Record>),
     Delete(Selector),
     Build,
+    CancelBuild,
     Lock,
 }
 struct Job {
@@ -140,6 +141,7 @@ pub struct Engine {
     locked: Arc<AtomicBool>,
     sequence: u64,
     last_change: u64,
+    background_analysis: Option<u64>,
 }
 impl Engine {
     pub fn new(path: PathBuf, keys: impl KeySource) -> Result<Self, Error> {
@@ -179,6 +181,7 @@ impl Engine {
             locked,
             sequence: 0,
             last_change: 0,
+            background_analysis: None,
         })
     }
     pub fn snapshot(&self) -> Snapshot {
@@ -238,6 +241,26 @@ impl Engine {
         }
         self.submit(config, now, Command::Build, false)
     }
+    /// Automatic refresh may yield to keyboard activity; explicit builds do not.
+    pub fn build_background(&mut self, config: &Config, now: u64) -> Result<(), Error> {
+        self.build(config, now)?;
+        self.background_analysis = Some(self.analysis.load(Ordering::Acquire));
+        Ok(())
+    }
+    /// Invalidate inference immediately, then let the owner restore its ready
+    /// snapshot without changing stored writing or the previously saved profile.
+    pub fn interrupt_background(&mut self, config: &Config, now: u64) -> Result<bool, Error> {
+        let Some(analysis) = self.background_analysis.take() else {
+            return Ok(false);
+        };
+        if self.analysis.load(Ordering::Acquire) != analysis
+            || self.snapshot().status != Status::Building
+        {
+            return Ok(false);
+        }
+        self.submit(config, now, Command::CancelBuild, false)?;
+        Ok(true)
+    }
     fn submit(
         &mut self,
         config: &Config,
@@ -246,6 +269,7 @@ impl Engine {
         invalidate: bool,
     ) -> Result<(), Error> {
         config.validate().map_err(|_| Error::InvalidData)?;
+        self.background_analysis = None;
         if matches!(command, Command::Lock) {
             self.locked.store(true, Ordering::Release);
         }
@@ -433,7 +457,7 @@ impl Owner {
                     self.active_analysis = None;
                     // An append producer may hold an older config snapshot. It
                     // cannot roll back source policy after an explicit configure.
-                    if !matches!(&job.command, Command::Append(_)) {
+                    if !matches!(&job.command, Command::Append(_) | Command::CancelBuild) {
                         self.config = job.config;
                     }
                     let result = self.execute(
@@ -589,6 +613,13 @@ impl Owner {
                     .map_err(|_| Error::Busy)?;
                 self.active_analysis = Some(analysis);
                 return Ok(Status::Building);
+            }
+            Command::CancelBuild => {
+                // submit() already revoked the analysis epoch. No transaction,
+                // source-policy update or profile replacement is needed here.
+                if self.vault.is_none() {
+                    return Ok(Status::Locked);
+                }
             }
         }
         Ok(Status::Ready)
@@ -979,6 +1010,95 @@ mod tests {
             request.finish(config, r#"{"guidance":"Old deleted style."}"#)
         }
     }
+    #[test]
+    fn keyboard_activity_cancels_only_background_analysis_and_preserves_saved_profile() {
+        let dir = Temp::new();
+        let config = Config::default();
+        let mut data = super::super::profile::tests::synthetic_data();
+        let profile = BuildRequest::new(&data, &config, 1, 30)
+            .unwrap()
+            .finish(&config, r#"{"guidance":"Previously saved style."}"#)
+            .unwrap();
+        data.set_profile(profile).unwrap();
+        let mut vault = Vault::open(dir.path(), MasterKey::from_bytes([42; 32])).unwrap();
+        vault
+            .transaction(|stored| {
+                *stored = data;
+                Ok(())
+            })
+            .unwrap();
+        drop(vault);
+        let saved = std::fs::read(dir.path()).unwrap();
+        let (entered, started) = mpsc::channel();
+        let (release, resume) = mpsc::channel();
+        let mut engine = Engine::with_analyzer(
+            dir.path(),
+            keys(None),
+            GatedAnalyzer {
+                entered,
+                release: resume,
+            },
+        )
+        .unwrap();
+        engine.unlock(&config, 30).unwrap();
+        settled(&engine);
+        engine.build_background(&config, 30).unwrap();
+        started.recv_timeout(Duration::from_secs(3)).unwrap();
+        let background_epoch = engine.analysis.load(Ordering::Acquire);
+        assert!(engine.interrupt_background(&config, 30).unwrap());
+        assert_ne!(engine.analysis.load(Ordering::Acquire), background_epoch);
+        // The analyzer is still gated: cancellation never waits on inference.
+        let snapshot = settled(&engine);
+        assert_eq!(snapshot.status, Status::Ready);
+        assert_eq!(snapshot.records, 3);
+        assert_eq!(
+            snapshot.profile.unwrap().guidance,
+            "Previously saved style."
+        );
+        assert_eq!(std::fs::read(dir.path()).unwrap(), saved);
+        assert!(!engine.interrupt_background(&config, 30).unwrap());
+
+        // A subsequent manual build must survive further keyboard activity.
+        engine.build(&config, 30).unwrap();
+        let manual_epoch = engine.analysis.load(Ordering::Acquire);
+        assert!(!engine.interrupt_background(&config, 30).unwrap());
+        assert_eq!(engine.analysis.load(Ordering::Acquire), manual_epoch);
+        release.send(()).unwrap(); // Late, canceled background result.
+        started.recv_timeout(Duration::from_secs(3)).unwrap();
+        assert_eq!(std::fs::read(dir.path()).unwrap(), saved);
+        assert_eq!(engine.snapshot().status, Status::Building);
+        release.send(()).unwrap(); // Deliberately requested manual result.
+        let snapshot = settled(&engine);
+        assert_eq!(snapshot.status, Status::Ready);
+        assert_eq!(snapshot.profile.unwrap().guidance, "Old deleted style.");
+        engine.lock().unwrap();
+        settled(&engine);
+    }
+
+    #[test]
+    fn keyboard_activity_does_not_cancel_completed_or_replaced_background_jobs() {
+        let dir = Temp::new();
+        let mut config = Config::default();
+        config.history.recording = true;
+        let mut engine = Engine::with_analyzer(dir.path(), keys(None), SyntheticAnalyzer).unwrap();
+        engine.unlock(&config, 30).unwrap();
+        settled(&engine);
+        engine.append(&config, samples(), 30).unwrap();
+        settled(&engine);
+        engine.build_background(&config, 30).unwrap();
+        let completed = settled(&engine);
+        assert!(completed.profile.is_some());
+        let epoch = engine.analysis.load(Ordering::Acquire);
+        assert!(!engine.interrupt_background(&config, 30).unwrap());
+        assert_eq!(engine.analysis.load(Ordering::Acquire), epoch);
+        assert_eq!(engine.snapshot().version, completed.version);
+        // Lock revokes an automatic request even if inference was just queued.
+        engine.build_background(&config, 30).unwrap();
+        engine.lock().unwrap();
+        assert!(!engine.interrupt_background(&config, 30).unwrap());
+        assert_eq!(settled(&engine).status, Status::Locked);
+    }
+
     #[test]
     fn deletion_finishes_during_slow_analysis_and_late_profiles_cannot_return() {
         let dir = Temp::new();

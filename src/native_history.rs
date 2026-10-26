@@ -203,6 +203,9 @@ impl Runtime {
         // Navigation also counts as activity, so automatic analysis waits while
         // the user is interacting with an editor even when capture is disabled.
         self.refresh.note_input(Instant::now());
+        if let Err(error) = self.worker.interrupt_background(config, seconds()) {
+            self.ui.message = error.to_string();
+        }
         if config.enabled
             && config.history.recording
             && self.snapshot.unlocked
@@ -445,7 +448,7 @@ impl Runtime {
         }
         self.snapshot = self.worker.snapshot();
         if self.refresh.take_due(config, &self.snapshot, Instant::now()) {
-            if let Err(error) = self.worker.build(config, seconds()) {
+            if let Err(error) = self.worker.build_background(config, seconds()) {
                 self.ui.message = error.to_string();
             }
             self.snapshot = self.worker.snapshot();

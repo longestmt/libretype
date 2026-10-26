@@ -1,5 +1,25 @@
 # Performance measurements
 
+## Automatic analysis yields to typing
+
+The current source cancels an automatic history-profile analysis when keyboard
+activity resumes. Previously the five-second idle check governed only when an
+analysis started; a running analysis could continue alongside new completion
+requests. Explicitly requested analysis remains active, and the automatic
+scheduler retains its sixty-second retry interval to avoid repeated restarts.
+
+The history worker invalidates the inference request before queuing cancellation
+and restores its ready snapshot without rewriting the vault. Deterministic tests
+hold the analyzer open, interrupt it, verify the previous encrypted snapshot is
+unchanged, then release a delayed result and verify it cannot replace the saved
+profile. A subsequent manual build still completes. Completed automatic jobs and
+locking are covered as well. These tests use invented writing and a temporary
+key, without accessing application history or Keychain.
+
+This change has not been installed or measured with native keyboard activity.
+It does not establish how quickly the model server releases compute resources or
+how much completion latency improves under competing work.
+
 ## Synthetic inference and process resources
 
 On 2026-10-24, a release-mode production-pipeline probe ran four invented

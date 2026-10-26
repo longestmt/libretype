@@ -14,7 +14,13 @@ That test kept history locked and recording disabled.
 
 Automatic profile refresh now waits for five seconds without keyboard activity
 even when recording is off, and does not start while suggestions are globally
-paused. A synthetic lifecycle check with the local Gemma4 E4B model verified
+paused. The current source also cancels automatic analysis if keyboard activity
+resumes, preserving the stored profile and the existing retry interval. Manual
+analysis continues when typing resumes. Worker regression tests verify epoch
+cancellation, rejection of a delayed canceled result, an unchanged encrypted
+snapshot, and preservation of a subsequent manual build. This change is not yet
+installed; native interruption and its effect on model latency remain unmeasured.
+A synthetic lifecycle check with the local Gemma4 E4B model verified
 three encrypted samples, scheduled profile generation, lock/unlock persistence
 and a completion using the restored profile with recording disabled. This used
 a temporary vault without Keychain or real writing; it does not verify native
