@@ -4,9 +4,11 @@ A macOS typing assistant written in Rust, with local suggestions through a
 separately installed Ollama service. No subscription, account or usage quota.
 
 **Version 1.0:** a source-first release for Apple-silicon Macs. The optional
-prebuilt app is ad-hoc signed and not notarized. Download the app and matching
+prebuilt app is ad-hoc signed and not notarized. Download the
+[DMG](https://github.com/longestmt/libretype/releases/download/v1.0.0/LibreType-1.0.0-macos-arm64.dmg)
+and drag LibreType into Applications. The matching
 [complete source](https://github.com/longestmt/libretype/releases/tag/v1.0.0)
-together with their checksums. See [installation notes](docs/INSTALLING.md)
+and checksums are available alongside it. See [installation notes](docs/INSTALLING.md)
 and the [release checklist](docs/RELEASE_1_0.md).
 
 ## Features
@@ -54,8 +56,8 @@ of the app bundle; it does not back up settings or writing history. See the
 before downgrading.
 If the renewed approval does not take effect, quit and reopen LibreType before
 testing suggestions again.
-Certificate builds can use `--identity` with a valid signing identity; notarization
-and public release hosting are not configured.
+Certificate builds can use `--identity` with a valid signing identity;
+notarization is not configured.
 
 Keep Ollama running, open LibreType, select a local model and grant Accessibility
 for suggestions in other apps. The Settings preview works without that permission.

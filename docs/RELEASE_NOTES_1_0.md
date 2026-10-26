@@ -11,7 +11,9 @@ notice only; its completion/setup scripts are unchanged from tested 0.1.9.
 ## Downloads and corresponding source
 
 - **[Complete corresponding source](https://github.com/longestmt/libretype/releases/download/v1.0.0/libretype-1.0.0-source.tar.gz)** — application, locked dependencies, matching Rust runtime source, build/install tooling, tests and notices.
-- **[Apple-silicon app](https://github.com/longestmt/libretype/releases/download/v1.0.0/LibreType-1.0.0-macos-arm64.zip)** — ad-hoc signed; **not Developer ID signed or notarized**.
+- **[Apple-silicon DMG](https://github.com/longestmt/libretype/releases/download/v1.0.0/LibreType-1.0.0-macos-arm64.dmg)** — open and drag LibreType into Applications. Ad-hoc signed; **not Developer ID signed or notarized**.
+- **[ZIP alternative](https://github.com/longestmt/libretype/releases/download/v1.0.0/LibreType-1.0.0-macos-arm64.zip)** — the same build 67 app.
+- **[DMG packaging source](https://github.com/longestmt/libretype/releases/download/v1.0.0/libretype-1.0.0-dmg-packaging-source.tar.gz)** — supplemental packaging scripts and instructions; use with the complete application source above.
 - **[SHA-256 checksums](https://github.com/longestmt/libretype/releases/download/v1.0.0/SHA256SUMS.txt)** — verify downloads from this trusted release.
 
 The complete-source archive is supplied at no charge alongside the binary.
@@ -24,7 +26,7 @@ Application-owned source and documentation are **GPL-3.0-only**, without warrant
 Third-party materials retain their licenses and attribution. Full license and
 notices are included in the app and source archive. See
 [GPL delivery review](https://github.com/longestmt/libretype/blob/v1.0.0/docs/GPL_COMPLIANCE.md)
-and [installation instructions](https://github.com/longestmt/libretype/blob/v1.0.0/docs/INSTALLING.md).
+and [installation instructions](https://github.com/longestmt/libretype/blob/main/docs/INSTALLING.md).
 
 ## Features
 
@@ -54,6 +56,10 @@ Personalization can infer names, spelling and sign-offs inconsistently. Docs has
 limited layout coverage. Other unverified editor/terminal integrations remain
 experimental. Broader ordinary-use feedback continues after release.
 
-An ad-hoc update may require renewed Accessibility approval. The installer
-preserves the previous app, but does not back up settings/history. Review data
+An ad-hoc update may require renewed Accessibility approval. The development
+installer preserves the previous app, but does not back up settings/history.
+Dragging the app from the DMG uses Finder replacement and creates no rollback
+backup. The DMG was mounted and its copied app signature and all 184 file hashes
+verified against the original release bundle; it does not change that bundle.
+Review data
 compatibility before downgrading. Reload Docs tabs after reloading the companion.

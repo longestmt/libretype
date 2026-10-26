@@ -13,8 +13,11 @@ to generate and accept suggestions through its existing local pipeline.
 ## Enable after installing a compatible build
 
 1. Open LibreType and enable “Google Docs companion” in Settings, then Save.
-2. Inspect the local registration with `python3 scripts/install_docs_companion.py`.
-   Run it with `--install` to register the bundled native host for Chrome.
+2. From the source directory, inspect the local registration with
+   `python3 scripts/install_docs_companion.py --app /Applications/LibreType.app`.
+   Add `--install` to register the bundled native host for Chrome. If you installed
+   in your home Applications folder, use `--app ~/Applications/LibreType.app`
+   instead. The path must match the copy you run.
 3. In `chrome://extensions`, enable Developer mode, choose Load unpacked, and
    select the directory printed by the registration command. This development
    extension requests access only to `https://docs.google.com/document/*` and

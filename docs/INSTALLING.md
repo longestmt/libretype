@@ -8,11 +8,21 @@ verified for this release.
 
 ## First run
 
+Download the [LibreType 1.0 DMG](https://github.com/longestmt/libretype/releases/download/v1.0.0/LibreType-1.0.0-macos-arm64.dmg),
+open it, and drag **LibreType.app** onto the **Applications** shortcut. Eject the
+disk image before opening the installed app. A [ZIP download](https://github.com/longestmt/libretype/releases/download/v1.0.0/LibreType-1.0.0-macos-arm64.zip)
+is also available; extract it and move the app to Applications yourself.
+
+For updates, quit LibreType first. If your existing copy is in `~/Applications`,
+replace it there instead of creating another copy in `/Applications`. Keep one
+installed copy. Finder replacement does not create the development installer's
+rollback backup. Both downloads contain the same build 67 app.
+
 1. Install and start Ollama separately. LibreType includes neither its service nor
    model weights. Select a local completion model; model downloads are explicit
    and have their own license notices.
-2. Keep one working copy of `LibreType.app` at `~/Applications/LibreType.app`.
-   Open that copy. The app lives in the **LT** menu bar; it does not require a Dock
+2. Open your installed `LibreType.app` from Applications. The app lives in the
+   **LT** menu bar; it does not require a Dock
    icon. Development installation and rollback commands are in the
    [README](../README.md#build-and-run).
 3. In **LT → Local models**, select an installed model. If the service is

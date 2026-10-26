@@ -69,6 +69,29 @@ normal builds use the matching toolchain's installed standard library. The
 compiler and Apple system libraries are separate system/build prerequisites.
 Model weights and Ollama are installed separately and are not release contents.
 
+## Package a drag-to-install DMG
+
+On macOS with Python 3.11+, wrap an existing verified app without rebuilding or
+re-signing it:
+
+```sh
+python3 scripts/build_dmg.py --app dist/LibreType.app --output dist/LibreType-1.0.0-macos-arm64.dmg
+```
+
+The command refuses to overwrite an existing image. It uses the system `hdiutil`
+to create and verify a compressed, read-only image containing the app, an
+`/Applications` shortcut and installation instructions. It mounts the image,
+checks every app file against the original, verifies its strict signature, and
+copies it to a temporary directory to verify ordinary file-copy installation.
+It neither launches nor installs the app. This does not test Gatekeeper approval
+on a clean Mac, notarize the app, or guarantee byte-identical disk images.
+
+The 1.0 DMG contains the unchanged build 67 app from the ZIP. Its complete
+application source archive and `v1.0.0` tag remain unchanged. The supplemental
+`libretype-1.0.0-dmg-packaging-source.tar.gz` supplies `build_dmg.py`,
+`app_bundle.py`, license notices and reproduction instructions. Publish both
+source archives alongside the DMG and include all new assets in `SHA256SUMS.txt`.
+
 ## Updates and data compatibility
 
 The development installer retains the previous **app bundle** in
