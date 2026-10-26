@@ -226,9 +226,10 @@ all original settings restored; clipboard context and history remained off.
 4. **Release delivery.** The dependency replacements remove the two missing-notice
    issues, and build 49 passed the native insertion check. The build 61 source
    export rebuilt and passed tests offline with an empty Cargo cache; the build
-   62 export subsequently passed the same validation. Build 63 is prepared and
-   its matching source also rebuilt and passed tests offline; it is not installed.
-   All three rebuilt bundles
+   62 export subsequently passed the same validation. Builds 63 and 64 were
+   prepared, and their matching sources also rebuilt and passed tests offline;
+   neither has been installed. Build 64 consolidates profile punctuation,
+   automatic-analysis interruption and companion 0.1.7. All four rebuilt bundles
    retained the notices and verified their ad-hoc signatures. This does not
    establish bit-for-bit reproducibility or public-release readiness. Complete contributor review
    documented in [release instructions](RELEASING.md), then verify signing,

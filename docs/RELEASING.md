@@ -166,6 +166,31 @@ not byte-identical to the prepared bundle, so this proves offline buildability,
 not reproducibility. Native build 63 installation and startup are still pending;
 no binary or source release was published.
 
+## Build 64 source validation
+
+Build 64 is prepared from revision
+`052d3aeedcd8029ca5bc519962895ac2b9c8b318`. It combines the profile punctuation
+fix, automatic-analysis interruption and companion 0.1.7. Build 63 was retained
+in the development build backup directory. Installed build 62 is unchanged.
+
+The matching `libretype-build64-source.tar.gz` archive has SHA-256
+`e7b29686a6d1b3940a25069970741cc4d284f213cd457304ff3189e323191973`.
+All 12,847 manifest hashes matched, and all 277 reviewed application/source files
+matched the source revision used for the prepared build. A fresh extraction with
+an empty Cargo cache and networking disabled passed the release build, all-target
+Rust suites (206 library and 247 application tests, with overlap), 18 packaging
+tests, 29 extension tests and the notice inventory check.
+
+The exported source produced a bundle with a valid strict ad-hoc signature,
+145 byte-verified dependency/runtime notice files and byte-matching companion
+0.1.7 files. The temporary rebuild was removed. The signed executables differ
+from those of the prepared bundle; this establishes offline buildability, not
+bit-for-bit reproducibility. No valid certificate signing identity is currently
+available. The update check reports a changed ad-hoc identity, so installing this
+build will require checking Accessibility approval again. Installation, native
+interruption testing and the companion's live initially-disabled setup check
+remain pending. Nothing was published.
+
 ## References
 
 - https://www.gnu.org/licenses/gpl-3.0.html (especially sections 1, 4–6 and 10)
