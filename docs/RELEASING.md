@@ -82,6 +82,24 @@ It does not replace native startup checks, contributor review, certificate
 signing, notarization or verification of published downloads. No files were
 published and the installed application was unchanged by this validation.
 
+
+## Build 62 source archive
+
+The local `libretype-build62-source.tar.gz` archive was exported from revision
+`68ba53bf31eee82ec4449551f48934255f214503`, matching the source used for build 62.
+All 12,845 manifest file hashes were verified, including the new MLX backend
+probe and changed model sources. The notice inventory is complete. The app
+bundle passed packaging verification and was installed with a backup of build 61.
+
+Archive SHA-256:
+`7c699b449b43a3a22c8c744389676a49250e2333b2edb9628631ca4afdd1b809`.
+
+The changed source passed all-target Rust tests and Clippy before packaging;
+this archive has not received a separate offline rebuild. Native build 62
+verification remains pending. Nothing was published, and the contributor,
+signing and distribution review gates remain open.
+
+
 ## References
 
 - https://www.gnu.org/licenses/gpl-3.0.html (especially sections 1, 4–6 and 10)
