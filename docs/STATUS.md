@@ -177,7 +177,12 @@ all original settings restored; clipboard context and history remained off.
    VSCodium source editor and Twinny composer to other chat/source surfaces,
    and verify terminal AI prompt/multiplexer layouts. The reported spreadsheet
    workflow is also verified; none of these checks establishes universal editor
-   support. Orca has no verified dedicated integration. Build 58's disposable
+   support. Orca has no verified dedicated integration. Its inspected
+   [`terminal read` contract](https://github.com/stablyai/orca/blob/fd26aef37c5f512eb75cd36828ae49cb1b7e0bc6/src/shared/runtime-terminal-contracts.ts)
+   exposes terminal text, not a typing-caret offset or pane screen rectangle;
+   its paging cursor must not be treated as an editor caret. A live focused-pane
+   Accessibility check remains necessary before choosing an adapter.
+   Build 58's disposable
    Chrome check passed for zero-width and zero-height inputs: the user reported
    suggestions only in the visible control, and native diagnostics recorded
    suppression followed by a visible suggestion after returning to that control.
