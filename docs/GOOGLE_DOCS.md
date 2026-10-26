@@ -91,9 +91,12 @@ All 34 extension tests pass, including worker-to-content interruption checks,
 stalled-step checks and rejection of arbitrary diagnostic details. These are
 synthetic checks; the reason for the earlier live interruption remains unknown.
 
-Installed build 64 bundles companion 0.1.7. The independently loaded standalone
-0.1.7 extension remains available without another reload or permission change
-when updating the native app.
+Installed build 64 bundles companion 0.1.7. Standalone companion 0.1.8 is staged
+in the existing unpacked-extension directory; activation requires reloading that
+extension in Chrome and then reloading the document. A verified copy of the prior
+standalone package is retained locally. The native app, extension identity,
+permissions, host registration and license files are unchanged; no Accessibility
+reset is required. Live verification of 0.1.8 is pending.
 
 ## Data and boundaries
 
