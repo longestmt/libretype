@@ -164,9 +164,13 @@ inventory check passed. Dynamic library paths refer only to macOS system files.
    Processing a saved image of the synthetic page separately recognized 14:20
    and used it in three completion checks, including the numeric-instruction
    control. That validates the supplied image's OCR/completion path, not live
-   window selection or capture. A development build with text-free stage
-   diagnostics is installed for the next live check; renewed Screen Recording
-   approval is pending. Preview success does not establish working live context.
+   window selection or capture. Build 59's text-free diagnostics, with both OS
+   permissions active, isolated the live failure before capture: no matching
+   foreground window contained the caret, and zero capture requests reached OCR.
+   A candidate uses the focused editor's Accessibility window bounds to anchor
+   window selection; its ambiguity and geometry regressions pass, but native
+   verification is pending. Screen context and clipboard context remain off,
+   and original settings were restored after the diagnostic check.
 4. **Performance and setup.** Build 58 captured three native typing-to-draw
    samples in Chrome: 7.50, 2.08 and 2.10 seconds, dominated by generation.
    See [measurement limits](PERFORMANCE.md). Extend this to controlled workloads
