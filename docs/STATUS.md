@@ -67,7 +67,8 @@ That check also exposed an on-screen, zero-width editor being classified as
 visible. The current source rejects such editor bounds while preserving normal
 zero-width insertion carets. Visibility regressions pass. Build 46's local preview
 and native mid-line insertion were verified with Accessibility active.
-The zero-width proxy rejection itself still needs native verification.
+Build 58 later verified suppression in disposable zero-width and zero-height
+Chrome inputs, with suggestions returning in the visible control.
 Unconfirmed-insertion diagnostics now distinguish unchanged text, a moved caret
 with the expected full text, and differing prefix/suffix text. These labels
 contain no writing; they do not relax verification or retry posted text.
@@ -144,10 +145,11 @@ inventory check passed. Dynamic library paths refer only to macOS system files.
    compatible-profile controls
    when evaluating fixes; suppressing all personalization would not close this gap.
    A candidate must then be checked on new writing contexts before recommending it.
-2. **Editor coverage.** Verify code-editor chat versus source policies and terminal
-   AI prompt/multiplexer layouts. Basic VSCodium source behavior and the reported
-   spreadsheet workflow are already verified; they do not establish these other
-   cases. Orca has no verified dedicated integration. Build 58's disposable
+2. **Editor coverage.** Extend code-editor policy checks beyond the verified
+   VSCodium source editor and Twinny composer to other chat/source surfaces,
+   and verify terminal AI prompt/multiplexer layouts. The reported spreadsheet
+   workflow is also verified; none of these checks establishes universal editor
+   support. Orca has no verified dedicated integration. Build 58's disposable
    Chrome check passed for zero-width and zero-height inputs: the user reported
    suggestions only in the visible control, and native diagnostics recorded
    suppression followed by a visible suggestion after returning to that control.
