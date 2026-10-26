@@ -153,10 +153,12 @@ inventory check passed. Dynamic library paths refer only to macOS system files.
    invented workshop notice and used its time in a completion. That verifies the
    preview pipeline, not capture of another application's window. Live capture
    still awaits explicit opt-in and macOS permission; the feature remains off.
-4. **Performance and setup.** Measure end-to-end typing latency and combined
-   application/model resource use under controlled conditions, then check actual
-   login launch and clean-machine setup. Existing request timings and the passive
-   process sample do not establish battery impact or a complete setup experience.
+4. **Performance and setup.** Build 58 captured three native typing-to-draw
+   samples in Chrome: 7.50, 2.08 and 2.10 seconds, dominated by generation.
+   See [measurement limits](PERFORMANCE.md). Extend this to controlled workloads
+   and combined application/model resource use, then check actual login launch
+   and clean-machine setup. These samples do not establish broad latency,
+   battery impact or a complete setup experience.
 5. **Release delivery.** The dependency replacements remove the two missing-notice
    issues, and build 49 passed the native insertion check. Complete contributor review
    documented in [release instructions](RELEASING.md), then verify signing,

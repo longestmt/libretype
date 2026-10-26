@@ -45,6 +45,8 @@ mod history;
 mod keyboard;
 #[path = "native_models.rs"]
 mod models;
+#[path = "native_latency.rs"]
+mod latency;
 #[path = "native_screen.rs"]
 mod screen;
 #[path = "native_spelling.rs"]
@@ -480,6 +482,8 @@ thread_local! {
     static CAPTURE_STATUS: Cell<&'static str> = const { Cell::new("Starting") };
     static FONT_DIAGNOSTIC: Cell<(&'static str, f64)> = const { Cell::new(("not requested", 0.)) };
     static GHOST_DRAWS: Cell<u64> = const { Cell::new(0) };
+    static LATENCY: RefCell<latency::Tracker> = RefCell::new(latency::Tracker::default());
+    static GHOST_LATENCY_ID: Cell<Option<u64>> = const { Cell::new(None) };
     static CAPTURE_DETAIL: RefCell<CaptureDetail> = RefCell::new(CaptureDetail::default());
 }
 #[derive(Default, serde::Serialize)]
@@ -936,6 +940,8 @@ unsafe fn empty_history_on_screen(text: &str, range: Range, field: NSRect) -> bo
 struct Reply {
     id: u64,
     result: Result<String, String>,
+    started: Instant,
+    ended: Instant,
 }
 
 unsafe fn set_selection(ctx: &Context, range: Range) -> bool {
@@ -1151,6 +1157,16 @@ extern "C" fn draw_ghost(view: &Object, _: Sel, _: NSRect) {
             let inset: f64 = *view.get_ivar("ghostInset");
             let origin = NSPoint::new(inset, (bounds.size.height - size.height) / 2.);
             let _: () = msg_send![text, drawAtPoint:origin];
+            let window: id = msg_send![view, window];
+            let visible: BOOL = msg_send![window, isVisible];
+            if visible == YES {
+                if let Some(id) = GHOST_LATENCY_ID.with(Cell::get) {
+                    let pid = front_identity().0;
+                    if !IsSecureEventInputEnabled() {
+                        LATENCY.with(|l| l.borrow_mut().draw(id, pid, Instant::now()));
+                    }
+                }
+            }
         }
     }
 }
@@ -1703,6 +1719,8 @@ impl State {
         config.allows_app(app)
     }
     unsafe fn clear(&mut self) {
+        LATENCY.with(|l| l.borrow_mut().cancel());
+        GHOST_LATENCY_ID.with(|id| id.set(None));
         self.pending_control = None;
         self.pending_input.clear();
         if self.replacement_selection.take().is_some() {
@@ -1787,6 +1805,7 @@ impl State {
         set_title(button, if self.config.enabled { "LT" } else { "LTⅡ" });
     }
     unsafe fn overlay(&mut self) {
+        GHOST_LATENCY_ID.with(|id| id.set(None));
         if self.word_choices.is_some() {
             self.overlay_word_choices();
             return;
@@ -1906,6 +1925,9 @@ impl State {
         let previous: id = *(*self.ghost).get_ivar("ghostText");
         (*self.ghost).set_ivar("ghostText", text);
         let _: () = msg_send![previous, release];
+        if self.emoji_choices.is_none() && self.replacement.is_none() {
+            GHOST_LATENCY_ID.with(|id| id.set(LATENCY.with(|l| l.borrow().drawable_id())));
+        }
         let _: () = msg_send![self.ghost, setFrame:NSRect::new(NSPoint::new(0.,0.), frame.size)];
         let _: () = msg_send![self.ghost, setNeedsDisplay:YES];
         let _: () = msg_send![self.panel,setFrame:frame display:YES];
@@ -1941,6 +1963,7 @@ impl State {
             "keyboard_shortcuts": !self.tap.is_null(),
             "overlay_visible": visible == YES,
             "draw_count": GHOST_DRAWS.with(Cell::get),
+            "last_typing_latency": LATENCY.with(|l| l.borrow().last()),
             "ghost_font": FONT_DIAGNOSTIC.with(|d| {let (source, points) = d.get(); serde_json::json!({"source":source,"points":points})}),
             "caret": self.context.as_ref().map(|c| rect_coords(c.caret)),
             "field": self.context.as_ref().map(|c| rect_coords(c.field_bounds)),
@@ -2074,6 +2097,7 @@ impl State {
         self.process_screen_replies();
         self.process_choice_replies();
         while let Ok(reply) = self.replies.try_recv() {
+            let received = Instant::now();
             if reply.id != self.epoch.load(Ordering::SeqCst) {
                 continue;
             }
@@ -2110,6 +2134,7 @@ impl State {
                         _ => false,
                     };
                     if valid && !s.trim().is_empty() {
+                        LATENCY.with(|l| l.borrow_mut().reply(reply.id, reply.started, reply.ended, received));
                         self.suggestion = s;
                         self.overlay();
                     } else if valid {
@@ -2145,6 +2170,9 @@ impl State {
             || self.choice_progress != choices::Progress::Untried;
         let (now, empty) = capture_observation(&self.config, 0.08, allow_selection, false,
             self.history.recording_active(&self.config));
+        if now.is_none() {
+            LATENCY.with(|l| l.borrow_mut().cancel());
+        }
         if let Some(empty) = empty {
             self.history.observe_empty(&self.config, empty);
         } else {
@@ -2172,9 +2200,13 @@ impl State {
             _ => false,
         };
         if !same {
+            let input = LATENCY.with(|l| l.borrow_mut().take_unbound());
             self.clear();
             self.context = now;
             self.changed = Instant::now();
+            if let Some(ctx) = &self.context {
+                LATENCY.with(|l| l.borrow_mut().bind(input, ctx.pid, self.changed));
+            }
         } else if let (Some(previous), Some(current)) = (&self.context, now) {
             let moved = rect_coords(previous.caret) != rect_coords(current.caret)
                 || rect_coords(previous.field_bounds) != rect_coords(current.field_bounds);
@@ -2225,6 +2257,7 @@ impl State {
                     && (self.config.midline || ctx.suffix.trim().is_empty())
                 {
                     let id = self.epoch.fetch_add(1, Ordering::SeqCst) + 1;
+                    let requested_at = Instant::now();
                     let request = CompletionRequest {
                         id,
                         prefix: ctx.prefix.clone(),
@@ -2238,6 +2271,7 @@ impl State {
                     // is cancelling. A full queue is retried on the next timer tick.
                     self.requested = self.submit_with_screen(screen::Work::Completion(request));
                     if self.requested {
+                        LATENCY.with(|l| l.borrow_mut().request(id, requested_at));
                         self.pipeline_status = if self.screen.waiting() {
                             "Reading active-window text locally"
                         } else {
@@ -2716,6 +2750,7 @@ extern "C" fn on_licenses(_: &Object, _: Sel, _: id) {
     }
 }
 extern "C" fn event_callback(_: CF, kind: u32, event: CF, _: *mut c_void) -> CF {
+    let received = Instant::now();
     if matches!(kind, 10 | 11)
         && !event.is_null()
         && unsafe { CGEventGetIntegerValueField(event, 42) } == INSERT_EVENT_TAG
@@ -2891,6 +2926,14 @@ extern "C" fn event_callback(_: CF, kind: u32, event: CF, _: *mut c_void) -> CF 
                             s.history.mark_input(&s.config, pid, key, flags);
                             s.clear();
                             s.changed = Instant::now();
+                            // Plain typing only; navigation, shortcuts, synthetic
+                            // insertion and protected/blocked fields cannot qualify.
+                            if s.config.allows_app(&app)
+                                && flags & (crate::shortcuts::COMMAND | crate::shortcuts::CONTROL) == 0
+                                && matches!(key, 0..=47 | 49..=51 | 65 | 67 | 69 | 75 | 76 | 78 | 81..=92 | 95 | 117)
+                            {
+                                LATENCY.with(|l| l.borrow_mut().input(pid, received));
+                            }
                         }
                     }
                     if consumed && (0..128).contains(&key) {
@@ -3322,11 +3365,14 @@ pub fn run() -> Result<(), String> {
                 work = new;
             }
             let (config, request) = work;
+            let started = Instant::now();
             let result =
                 model::generate(&config, &request, &worker_epoch).map_err(|e| e.to_string());
             let _ = reply_tx.send(Reply {
                 id: request.id,
                 result,
+                started,
+                ended: Instant::now(),
             });
         }
     });
