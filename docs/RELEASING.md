@@ -57,6 +57,31 @@ normal builds use the matching toolchain's installed standard library. The
 compiler and Apple system libraries are separate system/build prerequisites.
 Model weights and Ollama are installed separately and are not release contents.
 
+## Updates and data compatibility
+
+The development installer retains the previous **app bundle** in
+`~/Applications/.LibreType-backups`. It does not snapshot or restore settings,
+writing history, Keychain entries, or the separately loaded Chrome extension.
+Restoring that bundle alone is not a guarantee of data compatibility.
+
+Before installing a build that changes accepted history/profile data, quit the
+app and retain a private, permission-preserving copy of the existing
+`~/Library/Application Support/LibreTypist` directory if rollback is needed.
+The encrypted history file is `history/writing.lt`; its existing Keychain key
+is still needed to read any copy. Do not delete or replace that key. Keep these
+local backups out of source archives and Git. No user-data backup is created
+automatically by the installer.
+
+The source change after build 62 accepts commas, exclamation marks and question
+marks in verified recurring profile phrases. Existing profiles remain readable
+in the new source, but build 62 and earlier reject a vault containing a profile
+with those newly accepted characters. The change is not installed yet. Before
+shipping it, verify upgrade and rollback with a disposable vault; use a matching
+pre-upgrade data snapshot for an older build. Preserve newer data separately
+before any restoration, since restoring an older snapshot cannot retain writing
+recorded after that snapshot. Never reset a user's history merely to make a
+downgrade work.
+
 
 ## Build 61 source validation
 

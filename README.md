@@ -35,7 +35,10 @@ python3 scripts/app_bundle.py install --quit --allow-identity-change
 The build creates `dist/LibreType.app`; installation defaults to
 `~/Applications/LibreType.app`. Development builds are ad-hoc signed and replacing
 them can require removing and re-adding the installed app in macOS
-**Privacy & Security → Accessibility**. The installer preserves a rollback copy.
+**Privacy & Security → Accessibility**. The installer preserves a rollback copy
+of the app bundle; it does not back up settings or writing history. See the
+[data compatibility notes](docs/RELEASING.md#updates-and-data-compatibility)
+before downgrading.
 If the renewed approval does not take effect, quit and reopen LibreType before
 testing suggestions again.
 Certificate builds can use `--identity` with a valid signing identity; notarization
