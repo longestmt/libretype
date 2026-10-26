@@ -556,6 +556,64 @@ impl State {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[link(name = "ImageIO", kind = "framework")]
+    extern "C" {
+        fn CGImageSourceCreateWithData(data: CF, options: CF) -> CF;
+        fn CGImageSourceCreateImageAtIndex(source: CF, index: usize, options: CF) -> CF;
+    }
+
+    #[test]
+    #[ignore = "explicit synthetic Nacre fixture image and local model; never captures a window"]
+    fn synthetic_window_fixture_live() {
+        let path = std::env::var("LIBRETYPE_SYNTHETIC_IMAGE")
+            .expect("Set LIBRETYPE_SYNTHETIC_IMAGE to the invented Nacre test-page image");
+        let bytes = std::fs::read(path).unwrap();
+        assert!(!bytes.is_empty() && bytes.len() < 4 * 1024 * 1024);
+        let text = unsafe {
+            let pool: id = msg_send![class!(NSAutoreleasePool), new];
+            let data: id = msg_send![class!(NSData),dataWithBytes:bytes.as_ptr() length:bytes.len()];
+            let source = OwnedCf(CGImageSourceCreateWithData(data as CF, ptr::null()));
+            assert!(!source.0.is_null());
+            let image = Image(CGImageSourceCreateImageAtIndex(source.0, 0, ptr::null()));
+            assert!(!image.0.is_null());
+            // Caret in the draft, below the reference image, as in this fixture.
+            let text = recognize(&image, [0.45, 0.38]).unwrap();
+            let _: () = msg_send![pool, drain];
+            text
+        };
+        assert!(text.contains("Nacre") && text.contains("14:20"));
+        let mut all_correct = true;
+        for instructions in ["", "7", "Use concise, polite wording."] {
+            let mut config = Config {
+                model: std::env::var("LIBRETYPE_SYNTHETIC_MODEL")
+                    .unwrap_or_else(|_| "gemma4:e4b".into()),
+                writing_instructions: instructions.into(),
+                ..Config::default()
+            };
+            config.background.screen = true;
+            let mut background = crate::background::Background::default();
+            background.set_screen(&text);
+            let request = CompletionRequest {
+                id: 1,
+                prefix: "The Nacre workshop begins at ".into(),
+                suffix: String::new(),
+                app_id: "com.google.Chrome".into(),
+                website: Some("127.0.0.1".into()),
+                profile: None,
+                background,
+            };
+            let started = Instant::now();
+            let output = model::generate(&config, &request, &AtomicU64::new(1)).unwrap();
+            let correct = output.contains("14:20")
+                || (output.contains("2:20") && output.to_lowercase().contains("p.m."));
+            println!("{}", serde_json::json!({"synthetic_instructions": instructions,
+                "output":output,"time_matches":correct,
+                "elapsed_ms":started.elapsed().as_secs_f64()*1000.}));
+            all_correct &= correct;
+        }
+        assert!(all_correct, "The completion must use the synthetic reference time");
+    }
+
     #[test]
     #[ignore = "synthetic image, OCR worker cancellation, and downloaded local model; no screen capture"]
     fn synthetic_ocr_and_model_live() {
