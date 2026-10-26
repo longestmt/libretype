@@ -260,3 +260,30 @@ Inez retained. The failed request remains in the evidence. These are unblinded,
 single-context observations rather than an aggregate accuracy score. No user
 history or application settings were loaded, and the installed app was unchanged.
 The source's deterministic all-target suites and Clippy check passed.
+
+
+### Separate system-message experiment
+
+Two later synthetic candidates used Ollama’s documented `system` field for
+resolved explicit preferences when personalization was active. The first kept
+those preferences in the original completion prompt as well; the second moved
+them out of the inline profile and final reminder. Both retained learned
+vocabulary, influence strength, output validation and the single-request design.
+The API supports this field independently of the completion prompt; that does
+not guarantee model compliance ([Ollama API](https://docs.ollama.com/api/generate)).
+
+The duplicated variant did not fix the four development spelling conflicts,
+generic identifier or missed recurring sign-off. The separated variant recovered
+the learned `colourScale` identifier, but failed the earlier preservation gate:
+it changed the American-spelling cheque completion from `ck` to `que` and added
+“is grey, and it” inside a sentence whose existing suffix said “is blue.” A fresh
+unchanged-baseline run passed both cases. The limited identifier improvement
+therefore did not justify adopting either candidate.
+
+This check used Gemma4 E4B with Ollama 0.40.8 and produced 57 completed synthetic
+responses with no returned errors. One additional in-flight candidate request
+was cancelled after the regression was found; seven completed expanded cases
+remain in the evidence. The remaining expanded cases and eight prewritten new
+holdouts were not run. These are unblinded development comparisons, not an
+accuracy estimate. No history, settings or installed application changed.
+Explicit-preference priority and learned-sign-off quality remain unresolved.

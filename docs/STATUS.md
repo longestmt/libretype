@@ -163,7 +163,10 @@ all original settings restored; clipboard context and history remained off.
    regressed explicit overrides, so neither was adopted. Keep frozen cases and
    compatible-profile controls when evaluating fixes; suppressing all
    personalization would not close this gap.
-   A candidate must then be checked on new writing contexts before recommending it.
+   A separate system-message experiment also failed: one variant made no target
+   improvement, and another recovered an identifier but regressed two previously
+   passing spelling/context checks. Neither was adopted. A candidate must then
+   be checked on new writing contexts before recommending it.
 2. **Editor coverage.** Extend code-editor policy checks beyond the verified
    VSCodium source editor and Twinny composer to other chat/source surfaces,
    and verify terminal AI prompt/multiplexer layouts. The reported spreadsheet
