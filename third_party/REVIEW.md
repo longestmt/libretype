@@ -41,8 +41,11 @@ copying, invocation on a worker thread after the Rust owner is dropped, and
 final capture cleanup. Foundation checks geometry layout and message round
 trips. These tests do not exercise live screen capture or establish support on
 untested CPU architectures. Build 49 also passed a native Twinny ghost-display
-and Tab-insertion check after Accessibility renewal. Live screen capture remains
-unverified and disabled.
+and Tab-insertion check after Accessibility renewal. Build 60 subsequently verified
+capture, OCR and insertion of an invented reference time in an isolated Chrome
+window. See [the scope of that live check](../docs/STATUS.md). Screen context was
+turned off afterward; this does not establish compatibility with every window
+or OCR layout.
 
 ## Test provenance
 
