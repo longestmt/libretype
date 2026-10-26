@@ -10,6 +10,7 @@ mod emoji;
 pub mod history;
 mod local_http;
 mod model;
+pub mod model_catalog;
 pub mod model_setup;
 #[cfg(target_os = "macos")]
 mod native;

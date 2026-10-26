@@ -173,7 +173,13 @@ all original settings restored; clipboard context and history remained off.
    suggestions only in the visible control, and native diagnostics recorded
    suppression followed by a visible suggestion after returning to that control.
    This establishes those two synthetic layouts, not every hidden-editor case.
-3. **Performance and setup.** Build 58 captured three native typing-to-draw
+3. **Performance and setup.** Model discovery now uses one background worker,
+   coalesces refresh requests, and retries when Ollama is unavailable. Healthy
+   inventories refresh once a minute. Local HTTP integration tests verify recovery,
+   local-only model filtering, malformed replies, response-size and whole-request
+   limits; scheduler tests cover backoff, concurrent refresh requests and worker
+   failure. These checks do not establish actual login launch or a clean-machine
+   installation. Build 58 captured three native typing-to-draw
    samples in Chrome: 7.50, 2.08 and 2.10 seconds, dominated by generation.
    See [measurement limits](PERFORMANCE.md). Extend this to controlled workloads
    and combined application/model resource use, then check actual login launch

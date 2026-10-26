@@ -596,11 +596,30 @@ struct GenerationEvent {
 }
 
 pub fn list_models() -> Result<Vec<String>, ModelError> {
-    let value: Value = agent()
-        .get(&format!("{BASE}/api/tags"))
+    list_models_at(BASE, Duration::from_secs(5))
+}
+
+pub(crate) fn list_models_at(base: &str, timeout: Duration) -> Result<Vec<String>, ModelError> {
+    const MAX_LIST: u64 = 1024 * 1024;
+    let response = agent()
+        .get(&format!("{base}/api/tags"))
+        .timeout(timeout)
         .call()
-        .map_err(http_error)?
-        .into_json()
+        .map_err(http_error)?;
+    let mut raw = Vec::new();
+    response
+        .into_reader()
+        .take(MAX_LIST + 1)
+        .read_to_end(&mut raw)
+        .map_err(|_| {
+            ModelError::Unavailable("Could not read the local model list; retrying may help".into())
+        })?;
+    if raw.len() as u64 > MAX_LIST {
+        return Err(ModelError::InvalidResponse(
+            "Ollama model list exceeds the size limit".into(),
+        ));
+    }
+    let value: Value = serde_json::from_slice(&raw)
         .map_err(|_| ModelError::InvalidResponse("Ollama returned an invalid model list".into()))?;
     let models = value
         .get("models")
