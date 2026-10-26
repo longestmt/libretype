@@ -154,12 +154,15 @@ all original settings restored; clipboard context and history remained off.
 1. **Personalization quality.** The native storage/profile lifecycle works, but
    inferred spelling conventions and explicit-instruction priority have known
    failures. An explicit-preference reminder improved one Gemma spelling conflict
-   and one Qwen sign-off conflict while preserving compatible-name controls; a
-   fresh neighbour/neighbor conflict remains. Two deterministic spelling-evidence
-   candidates improved extraction but regressed explicit overrides, so neither
-   was adopted. Keep the frozen cases alongside
-   compatible-profile controls
-   when evaluating fixes; suppressing all personalization would not close this gap.
+   and one Qwen sign-off conflict while preserving compatible-name controls.
+   Removing a conflicting blanket vocabulary-spelling directive also corrected
+   the earlier neighbour/neighbor case on Gemma. Twenty additional paired cases
+   remained unchanged, including unresolved spelling and sign-off failures with
+   a longer profile. This source-only change has not replaced installed build 60.
+   Two deterministic spelling-evidence candidates improved extraction but
+   regressed explicit overrides, so neither was adopted. Keep frozen cases and
+   compatible-profile controls when evaluating fixes; suppressing all
+   personalization would not close this gap.
    A candidate must then be checked on new writing contexts before recommending it.
 2. **Editor coverage.** Extend code-editor policy checks beyond the verified
    VSCodium source editor and Twinny composer to other chat/source surfaces,
