@@ -397,3 +397,41 @@ were checked for the changed prompt text. This is an unblinded, single-call
 development comparison, not an accuracy estimate. The frozen-profile probes
 isolate completion behavior; they do not establish extraction quality or resolve
 the outstanding personalization limitations.
+
+
+### Separate chat-role experiment
+
+A subsequent isolated candidate used Ollama's [chat endpoint](https://docs.ollama.com/api/chat)
+for personalized completions with explicit instructions. The exact resolved
+instructions became a system message; the existing prepared prompt, including
+all learned entries, remained the user message. Strength, generation options,
+output schema and insertion validation were unchanged. The candidate added only
+the exact chat path to the existing loopback-only transport allowlist; proxy,
+redirect, cancellation and response limits remained in place.
+
+Fresh paired checks on the same MLX artifact and Ollama 0.40.11 reproduced the
+previous baseline. The candidate preserved the seven frozen cases and corrected
+the longer profile's toolkit choice from `colourScale` to `TheatreKit`. Removing
+quotes around an identifier and terminal punctuation from a generic sign-off
+were not counted as quality gains. Ordinary-word spelling conflicts and the
+longer profile's missed sign-off remained unresolved.
+
+The initial preservation gate passed narrowly, so 24 additional existing contexts
+were compared. In one, the baseline correctly retained `Keep the colours flying.`
+under an explicit request to preserve the British sign-off verbatim. The candidate
+instead returned `Best regards`. The other 23 outputs were unchanged, including
+remaining spelling failures. This regression disqualified the candidate; its
+source changes were reverted. Eight further contexts declared before the expanded
+comparison were not run. Production continues to use the existing generation
+path, with no model, installation, history or settings changes.
+
+The valid comparison contains 43 paired cases (86 completed calls), with no
+returned errors and stable model identity. An earlier transport attempt rejected
+17 calls before inference because the experimental chat path was not yet allowed;
+its two unchanged control calls completed. A build-cache mix-up also caused 16
+attempted baseline calls to use a candidate binary. Those results were excluded,
+the baseline was rebuilt in a separate target directory, and the affected
+comparison was repeated with checked binaries. A text-free route marker confirmed
+the candidate's chat path during the expanded check. There were 104 completed
+calls including excluded runs. All writing was invented; this remains an
+unblinded development comparison, not an accuracy or latency estimate.

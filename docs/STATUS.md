@@ -193,6 +193,9 @@ all original settings restored; clipboard context and history remained off.
    spelling and sign-off failures remained. A targeted spelling-precedence
    reminder changed none of nineteen outputs and was reverted. Model identity
    and evaluation limits are recorded in [model quality](MODEL_QUALITY.md).
+   A separate chat-role candidate corrected one toolkit choice but regressed a
+   previously preserved verbatim sign-off across 43 paired contexts. It was
+   rejected and reverted; the existing generation path remains unchanged.
 2. **Editor coverage.** Extend code-editor policy checks beyond the verified
    VSCodium source editor and Twinny composer to other chat/source surfaces,
    and verify terminal AI prompt/multiplexer layouts. The reported spreadsheet
