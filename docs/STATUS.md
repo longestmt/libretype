@@ -154,10 +154,15 @@ inventory check passed. Dynamic library paths refer only to macOS system files.
    suggestions only in the visible control, and native diagnostics recorded
    suppression followed by a visible suggestion after returning to that control.
    This establishes those two synthetic layouts, not every hidden-editor case.
-3. **Optional live screen context.** Build 46's in-memory OCR sample recognized an
-   invented workshop notice and used its time in a completion. That verifies the
-   preview pipeline, not capture of another application's window. Live capture
-   still awaits explicit opt-in and macOS permission; the feature remains off.
+3. **Optional live screen context.** The in-memory OCR preview recognizes an
+   invented workshop notice and uses its time in a completion. A separately
+   authorized live Chrome check in build 58 failed: the reference image showed
+   14:20, but the inserted completion said 9:00 a.m. The user confirmed macOS
+   permission was available, and the website was identified and not excluded.
+   Existing diagnostics do not isolate capture, OCR or model compliance as the
+   cause. Screen context was turned off and original settings restored afterward.
+   Add text-free stage diagnostics before repeating the live check; preview
+   success does not establish working live screen context.
 4. **Performance and setup.** Build 58 captured three native typing-to-draw
    samples in Chrome: 7.50, 2.08 and 2.10 seconds, dominated by generation.
    See [measurement limits](PERFORMANCE.md). Extend this to controlled workloads
