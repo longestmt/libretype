@@ -163,7 +163,12 @@ all original settings restored; clipboard context and history remained off.
 
 ## Remaining work, in priority order
 
-1. **Personalization quality.** The native storage/profile lifecycle works, but
+1. **Personalization quality.** A source fix now selects distinct eligible
+   excerpts before spending the sample budget. Repeated recent records and short
+   legacy records previously hid usable older samples and could prevent profile
+   generation. Regression and all-target tests pass; this fix is not installed.
+   It does not resolve model extraction or instruction-priority failures.
+   The native storage/profile lifecycle works, but
    inferred spelling conventions and explicit-instruction priority have known
    failures. A source fix now preserves punctuation in model-selected recurring
    greetings and sign-offs, which previously dropped valid entries such as

@@ -181,6 +181,119 @@ pub(crate) mod tests {
         data
     }
     #[test]
+    fn repeated_recent_records_do_not_hide_distinct_eligible_samples() {
+        let config = Config::default();
+        let mut data = synthetic_data();
+        let repeated = data.records[0].text.clone();
+        for index in 4..=20 {
+            data.upsert(Record {
+                id: [index; 16],
+                scope: Scope {
+                    app: "org.libretypist.test".into(),
+                    website: None,
+                },
+                created_at: 10,
+                updated_at: 20 + u64::from(index),
+                text: if index % 2 == 0 {
+                    repeated.to_uppercase()
+                } else {
+                    repeated.replace(' ', "  ")
+                },
+            })
+            .unwrap();
+        }
+        let build = BuildRequest::new(&data, &config, 1, 60).unwrap();
+        assert_eq!(build.examples.len(), 3);
+        assert!(build
+            .examples
+            .iter()
+            .any(|s| s.contains("checked the draft")));
+        assert!(build
+            .examples
+            .iter()
+            .any(|s| s.contains("share a short summary")));
+        // Duplicates must not become independent evidence when other sources
+        // are excluded, expired, or absent.
+        for record in &mut data.records[1..3] {
+            record.scope.app = "excluded.app".into();
+        }
+        let mut restricted = config.clone();
+        restricted.history.excluded_apps.push("excluded.app".into());
+        assert!(matches!(
+            BuildRequest::new(&data, &restricted, 1, 60),
+            Err(Error::InsufficientSamples)
+        ));
+        let mut expired = config.clone();
+        expired.history.retention_days = 1;
+        assert!(matches!(
+            BuildRequest::new(&data, &expired, 1, 86425),
+            Err(Error::InsufficientSamples)
+        ));
+        data.records.drain(1..3);
+        assert!(matches!(
+            BuildRequest::new(&data, &config, 1, 60),
+            Err(Error::InsufficientSamples)
+        ));
+    }
+
+    #[test]
+    fn short_legacy_records_do_not_spend_profile_sample_slots() {
+        let config = Config::default();
+        let mut data = synthetic_data();
+        for index in 4..=20 {
+            data.upsert(Record {
+                id: [index; 16],
+                scope: Scope {
+                    app: "org.libretypist.test".into(),
+                    website: None,
+                },
+                created_at: 10,
+                updated_at: 20 + u64::from(index),
+                text: format!("Brief legacy sample {index}"),
+            })
+            .unwrap();
+        }
+        data.validate().unwrap(); // Legacy storage remains readable.
+        let build = BuildRequest::new(&data, &config, 1, 60).unwrap();
+        assert_eq!(build.examples.len(), 3);
+        assert!(!build.prompt().contains("Brief legacy sample"));
+    }
+
+    #[test]
+    fn diverse_sample_selection_keeps_character_byte_and_source_bounds() {
+        let config = Config::default();
+        let mut data = synthetic_data();
+        for (index, record) in data.records.iter_mut().enumerate() {
+            record.text = format!("{} sample {index}", "🦀".repeat(650));
+        }
+        let build = BuildRequest::new(&data, &config, 1, 30).unwrap();
+        assert_eq!(build.examples.len(), 3);
+        assert!(build.examples.iter().map(String::len).sum::<usize>() <= 6000);
+        assert!(build.examples.iter().all(|s| s.chars().count() >= 40));
+        for index in 4..=40 {
+            data.upsert(Record {
+                id: [index; 16],
+                scope: Scope {
+                    app: "org.libretypist.test".into(),
+                    website: None,
+                },
+                created_at: 10,
+                updated_at: 20 + u64::from(index),
+                text: format!(
+                    "Recent invented writing sample {index} for checking selection limits."
+                ),
+            })
+            .unwrap();
+        }
+        let examples = data.examples(&config.history, &config);
+        assert_eq!(examples.len(), 12);
+        assert!(examples[0].contains("sample 40"));
+        assert!(examples.iter().all(|s| s.chars().count() <= 700));
+        assert!(examples.iter().map(|s| s.chars().count()).sum::<usize>() <= 6000);
+        assert!(examples.iter().all(|s| !s.contains('🦀')));
+    }
+
+    #[test]
     fn complete_recurring_signoffs_survive_profile_validation_and_storage() {
         let config = Config::default();
         let mut data = synthetic_data();

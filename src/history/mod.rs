@@ -395,8 +395,9 @@ impl Data {
         self.profile = Some(profile);
         Ok(())
     }
-    /// Bounded recent examples for the local profile builder; source policies
-    /// are reapplied so an exclusion also removes that source from future profiles.
+    /// Bounded recent distinct excerpts for the local profile builder. Short
+    /// legacy records and duplicate excerpts do not spend the sample budget.
+    /// Source policies still exclude disallowed writing before selection.
     pub fn examples(&self, settings: &Settings, config: &Config) -> Vec<String> {
         let mut records: Vec<_> = self
             .records
@@ -405,15 +406,39 @@ impl Data {
             .collect();
         records.sort_by_key(|r| std::cmp::Reverse(r.updated_at));
         let mut budget = 6000;
-        records
-            .into_iter()
-            .take(12)
-            .filter_map(|r| {
-                let text: String = r.text.chars().take(700.min(budget)).collect();
-                budget = budget.saturating_sub(text.chars().count());
-                (!text.trim().is_empty()).then_some(text)
-            })
-            .collect()
+        let mut examples = Vec::new();
+        let mut seen = zeroize::Zeroizing::new(Vec::<String>::new());
+        for record in records {
+            if examples.len() == 12 || budget < MIN_WRITING_CHARS {
+                break;
+            }
+            let candidate = zeroize::Zeroizing::new(record.text.chars().take(700).collect::<String>());
+            if candidate.trim().chars().count() < MIN_WRITING_CHARS {
+                continue;
+            }
+            let key = zeroize::Zeroizing::new(vocabulary::normalized(&candidate));
+            if key.is_empty() || seen.iter().any(|prior| prior == key.as_str()) {
+                continue;
+            }
+            let text = zeroize::Zeroizing::new(candidate.chars().take(budget).collect::<String>());
+            if text.trim().chars().count() < MIN_WRITING_CHARS {
+                continue;
+            }
+            let excerpt_key = zeroize::Zeroizing::new(vocabulary::normalized(&text));
+            if excerpt_key.is_empty() || seen.iter().any(|prior| prior == excerpt_key.as_str()) {
+                continue;
+            }
+            // Count distinct excerpts before spending either sample or text
+            // budget. Keep the full key too: a shorter remaining budget must
+            // not turn another copy of the same record into a new sample.
+            budget -= text.chars().count();
+            seen.push(key.to_string());
+            if key.as_str() != excerpt_key.as_str() {
+                seen.push(excerpt_key.to_string());
+            }
+            examples.push(text.to_string());
+        }
+        examples
     }
 }
 #[derive(Clone)]
@@ -762,7 +787,10 @@ mod tests {
     #[test]
     fn revisions_retention_and_profile_examples_stay_consistent() {
         let mut data = Data::default();
-        let item = record(1, "com.apple.mail", None, "My synthetic writing sample.");
+        let item = record(
+            1, "com.apple.mail", None,
+            "My synthetic writing sample is long enough for style analysis.",
+        );
         data.upsert(item.clone()).unwrap();
         let rev = data.revision;
         assert!(!data.upsert(item).unwrap());

@@ -9,7 +9,7 @@ pub const MAX_ENTRIES: usize = 16;
 pub const MAX_ENTRY_CHARS: usize = 64;
 pub const MAX_TOTAL_CHARS: usize = 512;
 
-fn normalized(text: &str) -> String {
+pub(super) fn normalized(text: &str) -> String {
     text.split_whitespace()
         .collect::<Vec<_>>()
         .join(" ")
